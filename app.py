@@ -5,7 +5,12 @@ from datetime import datetime, timezone
 from flask import Flask, g, jsonify, render_template, request
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DB_PATH = os.path.join(BASE_DIR, "notes.db")
+# Vercel inaruhusu kuandika kwenye /tmp tu (folder ya app ni ya kusoma tu).
+# Kumbuka: /tmp hufutika mara kwa mara, kwa hiyo notes ni za muda huko.
+if os.environ.get("VERCEL") or not os.access(BASE_DIR, os.W_OK):
+    DB_PATH = "/tmp/notes.db"
+else:
+    DB_PATH = os.path.join(BASE_DIR, "notes.db")
 COLORS = {"default", "yellow", "green", "blue", "pink", "purple"}
 
 app = Flask(__name__)
