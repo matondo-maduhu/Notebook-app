@@ -238,13 +238,13 @@ button { cursor: pointer; }
 .card-pin .i { width: 16px; height: 16px; fill: currentColor; }
 
 .card-body {
-    margin: 0; font-size: .95rem; line-height: 1.5; opacity: .9;
+    margin: 0; font-size: calc(.95rem * var(--ts, 1)); line-height: 1.5; opacity: .9;
     white-space: pre-wrap;
     display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 9; overflow: hidden;
 }
 
 .card-items { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
-.card-item { display: flex; align-items: flex-start; gap: 8px; font-size: .95rem; line-height: 1.35; }
+.card-item { display: flex; align-items: flex-start; gap: 8px; font-size: calc(.95rem * var(--ts, 1)); line-height: 1.35; }
 .card-item.done span { text-decoration: line-through; opacity: .55; }
 .card-more { margin: 6px 0 0; font-size: .82rem; color: var(--muted); }
 
@@ -367,14 +367,14 @@ dialog::backdrop { background: rgba(6, 14, 10, .55); backdrop-filter: blur(2px);
 .ed-body {
     display: block; width: 100%; min-height: 30vh; margin: 0; padding: 4px 0;
     border: 0; outline: 0; resize: none; background: transparent;
-    font-size: 1.06rem; line-height: 1.7;
+    font-size: calc(1.06rem * var(--ts, 1)); line-height: 1.7;
 }
 
 .ed-list { padding: 2px 0 8px; }
 .item { display: flex; align-items: center; gap: 10px; padding: 3px 0; }
 .item input {
     flex: 1; min-width: 0; height: 38px; padding: 0;
-    border: 0; outline: 0; background: transparent; font-size: 1.06rem;
+    border: 0; outline: 0; background: transparent; font-size: calc(1.06rem * var(--ts, 1));
 }
 .item.done input { text-decoration: line-through; color: var(--muted); }
 .item .icon-btn { width: 34px; height: 34px; color: var(--muted); opacity: 0; }
@@ -501,7 +501,7 @@ dialog::backdrop { background: rgba(6, 14, 10, .55); backdrop-filter: blur(2px);
 
 /* ============ Ujumbe mfupi ============ */
 .toast {
-    position: fixed; z-index: 2000; left: 50%; transform: translateX(-50%);
+    position: fixed; z-index: 2000; left: 50%; top: auto; right: auto; margin: 0; border: 0; overflow: visible; transform: translateX(-50%);
     bottom: calc(92px + env(safe-area-inset-bottom));
     display: flex; align-items: center; gap: 14px;
     max-width: calc(100vw - 32px); padding: 12px 18px;
@@ -527,3 +527,40 @@ dialog::backdrop { background: rgba(6, 14, 10, .55); backdrop-filter: blur(2px);
 @media (prefers-reduced-motion: reduce) {
     * { transition: none !important; animation: none !important; }
 }
+
+/* ============ Vipengele vipya ============ */
+.tag .i { width: 13px; height: 13px; }
+.tag.due { gap: 5px; padding-left: 7px; }
+.tag.due.overdue { background: color-mix(in srgb, var(--danger) 18%, transparent); color: var(--danger); }
+
+.ed-due { display: flex; align-items: center; gap: 8px; margin-top: 6px; color: var(--muted); min-height: 36px; }
+.due-wrap { position: relative; display: flex; align-items: center; }
+.due-btn { border: 0; background: none; padding: 6px 0; color: var(--muted); font-size: .95rem; }
+.due-btn:hover { color: var(--ink); }
+#ed-due { position: absolute; left: 0; bottom: 0; width: 1px; height: 1px; padding: 0; border: 0; opacity: 0; pointer-events: none; }
+.tag-chip .due-label { width: auto; height: auto; padding: 0 4px 0 0; border-radius: 0; background: none; color: var(--ink); font: inherit; }
+.tag-chip.overdue { background: color-mix(in srgb, var(--danger) 18%, transparent); }
+.tag-chip.overdue .due-label { color: var(--danger); }
+
+.done-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.done-row .link { font-size: .85rem; padding: 6px 8px; }
+
+.card { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
+.card.selected { outline: 3px solid var(--accent); outline-offset: 0; }
+.sel-badge {
+    position: absolute; top: -9px; left: -9px; z-index: 1;
+    width: 26px; height: 26px; display: grid; place-items: center;
+    border-radius: 50%; background: var(--accent); color: var(--accent-ink); box-shadow: var(--shadow);
+}
+.sel-badge .i { width: 15px; height: 15px; stroke-width: 3; }
+
+.selbar {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 25;
+    display: flex; align-items: center; gap: 4px;
+    padding: calc(10px + env(safe-area-inset-top)) var(--side-r) 10px var(--side-l);
+    background: var(--surface); border-bottom: 1px solid var(--line);
+}
+.sel-count { flex: 1; min-width: 0; padding: 0 6px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+body.selecting .topbar { visibility: hidden; }
+body.selecting .fab-wrap { display: none; }
+body.selecting .card-actions { display: none !important; }

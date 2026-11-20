@@ -53,6 +53,7 @@
         "check-square": '<polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>',
         "file-text": '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>',
         chevron: '<polyline points="6 9 12 15 18 9"/>',
+        calendar: '<rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>',
     };
     const icon = (name) =>
         `<svg class="i" viewBox="0 0 24 24" aria-hidden="true">${ICONS[name] || ""}</svg>`;
@@ -87,6 +88,29 @@
         if (days < 7) return `Siku ${days} zilizopita`;
         const y = d.getFullYear() !== n.getFullYear() ? ` ${d.getFullYear()}` : "";
         return `${d.getDate()} ${MONTHS[d.getMonth()]}${y}`;
+    }
+
+    /* ===================== Tarehe ya mwisho ===================== */
+    const pad2 = (n) => String(n).padStart(2, "0");
+    const ymd = (d) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+    const todayStr = () => ymd(new Date());
+    const tomorrowStr = () => { const d = new Date(); d.setDate(d.getDate() + 1); return ymd(d); };
+
+    function fmtDue(s) {
+        if (s === todayStr()) return "Leo";
+        if (s === tomorrowStr()) return "Kesho";
+        const [y, m, d] = s.split("-").map(Number);
+        return `${d} ${MONTHS[m - 1]}${y !== new Date().getFullYear() ? " " + y : ""}`;
+    }
+    function isFinished(n) {
+        const items = n.items.filter((i) => i.text.trim());
+        return n.type === "list" && items.length > 0 && items.every((i) => i.done);
+    }
+    function dueInfo(n) {
+        if (!n.due) return null;
+        const finished = isFinished(n);
+        const overdue = n.due < todayStr() && !finished;
+        return { overdue, finished, text: (overdue ? "Imechelewa · " : "") + fmtDue(n.due) };
     }
 
     /* ===================== Hifadhi ===================== */
@@ -138,7 +162,7 @@
             id: uid(), type, title: "", body: "",
             items: type === "list" ? [newItem("")] : [],
             color: "default", pinned: false, archived: false, trashedAt: null,
-            tags: [], createdAt: t, updatedAt: t,
+            tags: [], due: null, createdAt: t, updatedAt: t,
         };
     }
 
@@ -166,6 +190,7 @@
             pinned: !!raw.pinned,
             archived: !!raw.archived,
             trashedAt: Number.isFinite(raw.trashedAt) ? raw.trashedAt : null,
+            due: typeof raw.due === "string" && /^\d{4}-\d{2}-\d{2}$/.test(raw.due) ? raw.due : null,
             createdAt: num(raw.createdAt, t),
             updatedAt: num(raw.updatedAt, t),
         };
@@ -173,9 +198,10 @@
 
     const state = {
         notes: [],
-        settings: { theme: "auto", view: "grid", sort: "updated", pinHash: null, pinSalt: null, seeded: false },
+        settings: { theme: "auto", view: "grid", sort: "updated", pinHash: null, pinSalt: null, seeded: false, fontSize: "m" },
         filter: "all",
         query: "",
+        sel: new Set(),
     };
 
     function loadAll() {
@@ -184,6 +210,7 @@
         if (!["auto", "light", "dark"].includes(state.settings.theme)) state.settings.theme = "auto";
         if (!["grid", "list"].includes(state.settings.view)) state.settings.view = "grid";
         if (!["updated", "created", "title"].includes(state.settings.sort)) state.settings.sort = "updated";
+        if (!["s", "m", "l"].includes(state.settings.fontSize)) state.settings.fontSize = "m";
 
         const saved = store.get(KEY_NOTES);
         state.notes = Array.isArray(saved) ? saved.map(sanitizeNote).filter(Boolean) : [];
@@ -248,6 +275,19 @@
 
     /* ===================== Ujumbe mfupi (toast) ===================== */
     let toastTimer = null;
+    function hideToast() {
+        const box = $("#toast");
+        box.hidden = true;
+    }
+    // Dirisha (dialog) lililo wazi huzuia kila kitu nje yake, kwa hiyo ujumbe huwekwa ndani yake.
+    function placeToast(box) {
+        const host = $("dialog[open]:not(#confirm)") || document.body;
+        if (box.parentNode !== host) host.append(box);
+    }
+    document.addEventListener("close", (e) => {
+        const box = $("#toast");
+        if (e.target && e.target.tagName === "DIALOG" && e.target.contains(box)) document.body.append(box);
+    }, true);
     function toast(message, actionLabel, onAction) {
         const box = $("#toast");
         const act = $("#toast-act");
@@ -255,13 +295,14 @@
         act.hidden = !actionLabel;
         act.textContent = actionLabel || "";
         act.onclick = () => {
-            box.hidden = true;
+            hideToast();
             clearTimeout(toastTimer);
             if (onAction) onAction();
         };
         box.hidden = false;
+        placeToast(box);
         clearTimeout(toastTimer);
-        toastTimer = setTimeout(() => (box.hidden = true), actionLabel ? 6000 : 2600);
+        toastTimer = setTimeout(hideToast, actionLabel ? 6000 : 2600);
     }
 
     /* ===================== Madirisha ===================== */
@@ -314,12 +355,14 @@
             if (f === "archive") return n.archived;
             if (n.archived && !q) return false;
             if (f === "lists" && n.type !== "list") return false;
+            if (f === "due" && !n.due) return false;
             if (f.startsWith("tag:") && !n.tags.includes(f.slice(4))) return false;
             return true;
         });
         if (q) list = list.filter((n) => matches(n, q));
         const key = state.settings.sort;
         list.sort((a, b) => {
+            if (f === "due") return a.due.localeCompare(b.due) || b.updatedAt - a.updatedAt;
             if (key === "title") return (a.title || "~").localeCompare(b.title || "~", "sw");
             if (key === "created") return b.createdAt - a.createdAt;
             return b.updatedAt - a.updatedAt;
@@ -347,6 +390,7 @@
     /* ===================== Kuchora orodha kuu ===================== */
     function setFilter(f) {
         state.filter = f;
+        state.sel.clear();
         render();
         window.scrollTo({ top: 0 });
     }
@@ -356,6 +400,7 @@
         nav.textContent = "";
         const live = state.notes.filter((n) => !n.trashedAt);
         const trashCount = state.notes.length - live.length;
+        const dueCount = live.filter((n) => n.due && !n.archived && !isFinished(n)).length;
         const counts = new Map();
         live.forEach((n) => n.tags.forEach((t) => counts.set(t, (counts.get(t) || 0) + 1)));
         if (state.filter.startsWith("tag:") && !counts.has(state.filter.slice(4))) state.filter = "all";
@@ -371,6 +416,7 @@
         nav.append(
             chip("all", "Zote"),
             chip("lists", "Orodha"),
+            chip("due", "Ratiba", dueCount || null),
             chip("archive", "Kumbukumbu"),
             chip("trash", "Tupio", trashCount || null)
         );
@@ -387,6 +433,7 @@
         if (q) { ring = "search"; title = "Hakuna matokeo"; text = `Hakuna note yenye “${q}”.`; action = false; }
         else if (f === "archive") { ring = "archive"; title = "Kumbukumbu ni tupu"; text = "Notes unazozihifadhi kando zitaonekana hapa."; action = false; }
         else if (f === "trash") { ring = "trash"; title = "Tupio ni tupu"; text = "Notes ulizofuta zitakaa hapa kwa siku 30."; action = false; }
+        else if (f === "due") { ring = "calendar"; title = "Hakuna ratiba"; text = "Weka tarehe kwenye note ili ionekane hapa."; action = false; }
         else if (f === "lists") { ring = "check-square"; title = "Hakuna orodha"; text = "Tengeneza orodha ya mambo ya kufanya."; }
         const box = $("#empty");
         box.textContent = "";
@@ -400,6 +447,9 @@
         const host = $("#notes");
         host.textContent = "";
         renderChips();
+        const visibleIds = new Set(visibleNotes().map((x) => x.id));
+        [...state.sel].forEach((id) => { if (!visibleIds.has(id)) state.sel.delete(id); });
+        renderSelbar();
 
         const viewBtn = $("#view-btn");
         viewBtn.textContent = "";
@@ -425,7 +475,7 @@
         if (!list.length) return;
 
         const grid = (items) => h("div", { class: "notes" + (state.settings.view === "list" ? " list" : "") }, items.map(renderCard));
-        const sectioned = !state.query.trim() && state.filter !== "archive" && state.filter !== "trash";
+        const sectioned = !state.query.trim() && !["archive", "trash", "due"].includes(state.filter);
         const pinned = sectioned ? list.filter((n) => n.pinned) : [];
         if (pinned.length) {
             const rest = list.filter((n) => !n.pinned);
@@ -439,7 +489,13 @@
     function renderCard(n) {
         const q = state.query;
         const trashed = !!n.trashedAt;
-        const card = h("article", { class: "card" + (trashed ? " in-trash" : ""), "data-color": n.color });
+        const card = h("article", { class: "card" + (trashed ? " in-trash" : "") + (state.sel.has(n.id) ? " selected" : ""), "data-color": n.color });
+        attachSelect(card, n);
+        if (state.sel.has(n.id)) {
+            const badge = h("span", { class: "sel-badge" });
+            badge.append(svgIcon("check"));
+            card.append(badge);
+        }
         if (!trashed) {
             card.tabIndex = 0;
             card.setAttribute("role", "button");
@@ -488,7 +544,17 @@
             card.append(h("p", { class: "card-body" }, "Note tupu"));
         }
 
-        if (n.tags.length) card.append(h("div", { class: "card-tags" }, n.tags.map((t) => h("span", { class: "tag" }, "#", t))));
+        const di = dueInfo(n);
+        if (n.tags.length || di) {
+            const row = h("div", { class: "card-tags" });
+            if (di) {
+                const b = h("span", { class: "tag due" + (di.overdue ? " overdue" : "") });
+                b.append(svgIcon("calendar"), di.text);
+                row.append(b);
+            }
+            n.tags.forEach((t) => row.append(h("span", { class: "tag" }, "#", t)));
+            card.append(row);
+        }
 
         const foot = h("div", { class: "card-foot" });
         foot.append(h("span", { class: "card-time" }, trashed ? "Imefutwa " + relTime(n.trashedAt).toLowerCase() : relTime(n.updatedAt)));
@@ -512,6 +578,116 @@
         foot.append(actions);
         card.append(foot);
         return card;
+    }
+
+    /* ===================== Uchaguzi wa notes nyingi ===================== */
+    function attachSelect(card, n) {
+        let timer = null;
+        let fired = false;
+        let sx = 0;
+        let sy = 0;
+        let ptype = "mouse";
+        const cancel = () => { clearTimeout(timer); timer = null; };
+        card.addEventListener("pointerdown", (e) => {
+            ptype = e.pointerType || "mouse";
+            fired = false;
+            if (ptype === "mouse" || e.target.closest("button")) return;
+            sx = e.clientX;
+            sy = e.clientY;
+            timer = setTimeout(() => {
+                timer = null;
+                fired = true;
+                try { if (navigator.vibrate) navigator.vibrate(12); } catch (err) { /* hakuna */ }
+                toggleSel(n.id);
+            }, 450);
+        });
+        card.addEventListener("pointermove", (e) => {
+            if (timer && Math.hypot(e.clientX - sx, e.clientY - sy) > 10) cancel();
+        });
+        ["pointerup", "pointercancel", "pointerleave"].forEach((t) => card.addEventListener(t, cancel));
+        card.addEventListener("contextmenu", (e) => {
+            e.preventDefault();
+            if (ptype === "mouse") toggleSel(n.id);
+        });
+        card.addEventListener("click", (e) => {
+            if (fired) { fired = false; e.preventDefault(); e.stopImmediatePropagation(); return; }
+            if (e.ctrlKey || e.metaKey || state.sel.size) {
+                e.preventDefault();
+                e.stopImmediatePropagation();
+                toggleSel(n.id);
+            }
+        });
+    }
+
+    function toggleSel(id) {
+        if (state.sel.has(id)) state.sel.delete(id);
+        else state.sel.add(id);
+        render();
+    }
+    const selectedNotes = () => state.notes.filter((n) => state.sel.has(n.id));
+
+    function bulk(label, mutate) {
+        const items = selectedNotes();
+        if (!items.length) return;
+        const snap = items.map((n) => ({ n, pinned: n.pinned, archived: n.archived, trashedAt: n.trashedAt, updatedAt: n.updatedAt }));
+        items.forEach(mutate);
+        state.sel.clear();
+        commit();
+        toast(`${label}: ${items.length}`, "Tendua", () => {
+            snap.forEach((s) => { s.n.pinned = s.pinned; s.n.archived = s.archived; s.n.trashedAt = s.trashedAt; s.n.updatedAt = s.updatedAt; });
+            commit();
+        });
+    }
+
+    async function bulkDeleteForever() {
+        const items = selectedNotes();
+        if (!items.length) return;
+        if (!(await confirmDialog(`Futa notes ${items.length} milele? Huwezi kuzirejesha.`, "Futa milele"))) return;
+        state.notes = state.notes.filter((n) => !state.sel.has(n.id));
+        state.sel.clear();
+        commit();
+    }
+
+    function renderSelbar() {
+        const bar = $("#selbar");
+        const count = state.sel.size;
+        bar.hidden = count === 0;
+        document.body.classList.toggle("selecting", count > 0);
+        if (!count) return;
+        bar.textContent = "";
+        const btn = (name, label, fn) => {
+            const b = h("button", { class: "icon-btn", type: "button", "aria-label": label, title: label, onclick: fn });
+            b.append(svgIcon(name));
+            return b;
+        };
+        bar.append(
+            btn("x", "Ghairi uchaguzi", () => { state.sel.clear(); render(); }),
+            h("span", { class: "sel-count" }, `Umechagua ${count}`),
+            btn("check-square", "Chagua zote", () => { visibleNotes().forEach((n) => state.sel.add(n.id)); render(); })
+        );
+        if (state.filter === "trash") {
+            bar.append(
+                btn("restore", "Rejesha", () => bulk("Zimerejeshwa", (n) => { n.trashedAt = null; n.updatedAt = now(); })),
+                btn("trash", "Futa milele", bulkDeleteForever)
+            );
+        } else {
+            const allPinned = selectedNotes().every((n) => n.pinned);
+            const unarchive = state.filter === "archive";
+            bar.append(
+                btn("pin", allPinned ? "Ondoa kubandika" : "Bandika juu", () =>
+                    bulk(allPinned ? "Zimeondolewa kubandikwa" : "Zimebandikwa", (n) => {
+                        n.pinned = !allPinned;
+                        if (n.pinned) n.archived = false;
+                        n.updatedAt = now();
+                    })),
+                btn("archive", unarchive ? "Toa kumbukumbu" : "Weka kumbukumbu", () =>
+                    bulk(unarchive ? "Zimetolewa kumbukumbuni" : "Zimewekwa kumbukumbu", (n) => {
+                        n.archived = !unarchive;
+                        if (n.archived) n.pinned = false;
+                    })),
+                btn("trash", "Futa", () => bulk("Zimehamishiwa tupio", (n) => { n.trashedAt = now(); }))
+            );
+        }
     }
 
     /* ===================== Vitendo kwa notes ===================== */
@@ -557,6 +733,7 @@
     function createNote(type) {
         const n = newNote(type);
         state.notes.push(n);
+        state.sel.clear();
         state.query = "";
         $("#search").value = "";
         if (state.filter === "trash" || state.filter === "archive") state.filter = "all";
@@ -571,7 +748,7 @@
     let doneOpen = true;
 
     const isEmptyNote = (n) =>
-        !n.title.trim() && !n.body.trim() && !n.items.some((i) => i.text.trim()) && n.tags.length === 0;
+        !n.title.trim() && !n.body.trim() && !n.items.some((i) => i.text.trim()) && n.tags.length === 0 && !n.due;
 
     function touch() {
         if (!cur) return;
@@ -630,6 +807,7 @@
         pin.setAttribute("aria-label", cur.pinned ? "Ondoa kubandika" : "Bandika juu");
         $("#ed-archive").setAttribute("aria-label", cur.archived ? "Toa kumbukumbu" : "Weka kumbukumbu");
         $("#ed-convert").lastChild.textContent = cur.type === "list" ? "Geuza kuwa maandishi" : "Geuza kuwa orodha";
+        renderDue();
         renderEditorTags();
         updateMeta();
     }
@@ -683,7 +861,8 @@
                 onclick: () => { doneOpen = !doneOpen; renderListEditor(); },
             });
             head.append(svgIcon("chevron"), `Zilizokamilika (${done.length})`);
-            wrap.append(head);
+            const clear = h("button", { class: "link", type: "button", onclick: clearDone }, "Futa zilizokamilika");
+            wrap.append(h("div", { class: "done-row" }, head, clear));
             if (doneOpen) done.forEach((i) => wrap.append(itemRow(i)));
         }
         if (focusId) {
@@ -752,6 +931,57 @@
         touch();
         refreshEditorChrome();
         showEditorType();
+    }
+
+    function renderDue() {
+        const has = !!cur.due;
+        $("#ed-due-btn").hidden = has;
+        $("#ed-due-chip").hidden = !has;
+        $("#ed-due").value = cur.due || "";
+        if (has) {
+            const info = dueInfo(cur);
+            $("#ed-due-label").textContent = fmtDue(cur.due) + (info && info.overdue ? " · imechelewa" : "");
+            $("#ed-due-chip").classList.toggle("overdue", !!(info && info.overdue));
+        }
+    }
+
+    function openDatePicker() {
+        const i = $("#ed-due");
+        try { i.showPicker(); } catch (e) { i.focus(); i.click(); }
+    }
+
+    function clearDone() {
+        const note = cur;
+        const removed = note.items.filter((i) => i.done);
+        if (!removed.length) return;
+        note.items = note.items.filter((i) => !i.done);
+        if (!note.items.length) note.items.push(newItem(""));
+        touch();
+        renderListEditor();
+        toast("Zilizokamilika zimefutwa", "Tendua", () => {
+            note.items = note.items.filter((i) => i.text.trim()).concat(removed);
+            note.updatedAt = now();
+            if (cur === note) renderListEditor();
+            flushSave();
+            render();
+        });
+    }
+
+    function downloadBlob(blob, name) {
+        const url = URL.createObjectURL(blob);
+        const a = h("a", { href: url, download: name });
+        document.body.append(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 2000);
+    }
+
+    function downloadNote() {
+        const text = noteText(cur);
+        if (!text) return toast("Note ni tupu");
+        const name = ((cur.title || "note").replace(/[\\/:*?"<>|]+/g, "").trim().slice(0, 40) || "note") + ".txt";
+        downloadBlob(new Blob([text], { type: "text/plain;charset=utf-8" }), name);
+        toast("Faili limepakuliwa");
     }
 
     async function shareNote() {
@@ -823,6 +1053,7 @@
         if (act === "share") shareNote();
         else if (act === "copy") copyNote();
         else if (act === "duplicate") duplicateNote();
+        else if (act === "txt") downloadNote();
         else if (act === "convert") convertType();
         else if (act === "delete") {
             const n = cur;
@@ -840,6 +1071,12 @@
     });
     $("#ed-tag").addEventListener("change", addTagFromInput);
     $("#ed-tag").addEventListener("blur", addTagFromInput);
+
+    // Tarehe ya mwisho
+    $("#ed-due-btn").addEventListener("click", openDatePicker);
+    $("#ed-due-label").addEventListener("click", openDatePicker);
+    $("#ed-due").addEventListener("change", (e) => { cur.due = e.target.value || null; touch(); renderDue(); });
+    $("#ed-due-clear").addEventListener("click", () => { cur.due = null; touch(); renderDue(); });
 
     // Rangi
     COLORS.forEach(([id, label]) => {
@@ -877,6 +1114,10 @@
             if (meta && bg) meta.setAttribute("content", bg);
         });
     }
+    function applyFont() {
+        const scale = { s: 0.9, m: 1, l: 1.15 }[state.settings.fontSize] || 1;
+        document.documentElement.style.setProperty("--ts", String(scale));
+    }
     window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", applyTheme);
 
     /* ===================== Mipangilio ===================== */
@@ -885,6 +1126,7 @@
     function syncSettingsUI() {
         $$("#seg-theme button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.val === state.settings.theme)));
         $$("#seg-sort button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.val === state.settings.sort)));
+        $$("#seg-font button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.val === state.settings.fontSize)));
         const has = !!state.settings.pinHash;
         $("#pin-state").textContent = has ? "PIN imewashwa" : "PIN haijawekwa";
         $("#pin-set").lastChild.textContent = has ? "Badilisha PIN" : "Weka PIN";
@@ -907,6 +1149,12 @@
         if (!b) return;
         state.settings.sort = b.dataset.val;
         saveSettings(); syncSettingsUI(); render();
+    });
+    $("#seg-font").addEventListener("click", (e) => {
+        const b = e.target.closest("button");
+        if (!b) return;
+        state.settings.fontSize = b.dataset.val;
+        saveSettings(); applyFont(); syncSettingsUI();
     });
     $("#view-btn").addEventListener("click", () => {
         state.settings.view = state.settings.view === "grid" ? "list" : "grid";
@@ -957,13 +1205,15 @@
 
     function wipeAll() {
         state.notes = [];
-        state.settings = { theme: "auto", view: "grid", sort: "updated", pinHash: null, pinSalt: null, seeded: true };
+        state.settings = { theme: "auto", view: "grid", sort: "updated", pinHash: null, pinSalt: null, seeded: true, fontSize: "m" };
         state.filter = "all";
         state.query = "";
         $("#search").value = "";
+        state.sel.clear();
         saveSettings();
         flushSave();
         applyTheme();
+        applyFont();
         render();
     }
 
@@ -1177,6 +1427,10 @@
         }
     });
 
+    document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape" && state.sel.size && lock.hidden && !$("dialog[open]")) { state.sel.clear(); render(); }
+    });
+
     /* ===================== Anza ===================== */
     function handleLaunchParams() {
         const type = new URLSearchParams(location.search).get("new");
@@ -1191,6 +1445,7 @@
         buildPad();
         loadAll();
         applyTheme();
+        applyFont();
         render();
         if (state.settings.pinHash && cryptoOk) await unlockFlow();
         handleLaunchParams();
