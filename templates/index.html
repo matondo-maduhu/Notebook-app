@@ -2,60 +2,188 @@
 <html lang="sw">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="theme-color" content="#4f46e5">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#0a7d55">
+    <meta name="description" content="Daftari Langu: notes na orodha za kufanya. Bila intaneti, bila malipo, notes zako zinabaki kwenye simu yako.">
     <title>Daftari Langu</title>
+    <link rel="manifest" href="{{ url_for('manifest') }}">
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='icon-192.png') }}">
+    <link rel="apple-touch-icon" href="{{ url_for('static', filename='icon-192.png') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
-    <header class="topbar">
-        <h1>📓 Daftari Langu</h1>
-        <div class="search-wrap">
-            <input id="search" type="search" placeholder="Tafuta notes..." autocomplete="off">
+    <div id="app">
+        <header class="topbar">
+            <div class="brand">
+                <svg class="logo" viewBox="0 0 48 48" aria-hidden="true">
+                    <rect width="48" height="48" rx="12" fill="#0a7d55"/>
+                    <rect x="13" y="10" width="22" height="28" rx="3" fill="#fff"/>
+                    <path d="M18 19h12M18 25h12M18 31h7" stroke="#0a7d55" stroke-width="2.6" stroke-linecap="round"/>
+                </svg>
+                <span class="brand-name">Daftari Langu</span>
+            </div>
+            <label class="search">
+                <span class="sr-only">Tafuta notes</span>
+                <span data-icon="search"></span>
+                <input id="search" type="search" placeholder="Tafuta notes" autocomplete="off" enterkeyhint="search">
+            </label>
+            <button id="view-btn" class="icon-btn" type="button" aria-label="Badilisha mpangilio"></button>
+            <button id="settings-btn" class="icon-btn" type="button" aria-label="Mipangilio" data-icon="settings"></button>
+        </header>
+
+        <nav id="chips" class="chips" aria-label="Vichujio"></nav>
+
+        <main id="main" class="main">
+            <div id="banner" class="banner" hidden></div>
+            <div id="notes"></div>
+            <div id="empty" class="empty" hidden></div>
+        </main>
+
+        <div class="fab-wrap">
+            <div id="fab-menu" class="fab-menu" hidden>
+                <button id="new-list" class="fab-opt" type="button" data-icon="check-square">Orodha</button>
+                <button id="new-text" class="fab-opt" type="button" data-icon="file-text">Note</button>
+            </div>
+            <button id="fab" class="fab" type="button" aria-label="Note mpya" aria-expanded="false" aria-haspopup="menu" data-icon="plus"></button>
         </div>
-        <button id="theme-toggle" class="icon-btn" title="Badilisha mandhari" aria-label="Badilisha mandhari">🌙</button>
-    </header>
+    </div>
 
-    <main class="layout">
-        <section class="list-panel" id="list-panel">
-            <div class="list-head">
-                <span id="count">0 notes</span>
-                <button id="new-btn" class="btn primary">+ Note mpya</button>
+    <!-- Kihariri cha note -->
+    <dialog id="editor" class="editor modal" aria-label="Hariri note">
+        <header class="ed-bar">
+            <button id="ed-back" class="icon-btn" type="button" aria-label="Rudi" data-icon="back"></button>
+            <span id="ed-status" class="ed-status" aria-live="polite"></span>
+            <button id="ed-pin" class="icon-btn" type="button" aria-label="Bandika juu" aria-pressed="false" data-icon="pin"></button>
+            <button id="ed-archive" class="icon-btn" type="button" aria-label="Weka kumbukumbu" data-icon="archive"></button>
+            <button id="ed-more" class="icon-btn" type="button" aria-label="Zaidi" aria-haspopup="menu" aria-expanded="false" data-icon="more"></button>
+            <div id="ed-menu" class="menu" role="menu" hidden>
+                <button type="button" role="menuitem" data-act="share" data-icon="share">Shiriki</button>
+                <button type="button" role="menuitem" data-act="copy" data-icon="copy">Nakili maandishi</button>
+                <button type="button" role="menuitem" data-act="duplicate" data-icon="copy">Tengeneza nakala</button>
+                <button type="button" role="menuitem" data-act="convert" data-icon="check-square" id="ed-convert">Geuza kuwa orodha</button>
+                <button type="button" role="menuitem" data-act="delete" data-icon="trash" class="danger">Futa</button>
             </div>
-            <ul id="notes-list" class="notes-list"></ul>
-            <p id="empty" class="empty" hidden>Hakuna notes bado. Bonyeza “Note mpya” kuanza.</p>
-        </section>
+        </header>
 
-        <section class="editor-panel" id="editor-panel">
-            <div id="editor-empty" class="editor-empty">
-                <p>Chagua note au tengeneza mpya ✍️</p>
+        <div class="ed-scroll">
+            <input id="ed-title" class="ed-title" type="text" placeholder="Kichwa" maxlength="300" aria-label="Kichwa cha note" autocomplete="off">
+            <textarea id="ed-body" class="ed-body" placeholder="Andika hapa..." aria-label="Maandishi ya note" spellcheck="true"></textarea>
+            <div id="ed-list" class="ed-list" hidden>
+                <div id="ed-items"></div>
             </div>
+            <div class="ed-tags">
+                <span class="tag-ico" data-icon="tag" aria-hidden="true"></span>
+                <div id="ed-taglist" class="taglist"></div>
+                <input id="ed-tag" class="tag-input" type="text" list="tag-suggest" placeholder="Ongeza lebo" maxlength="30" aria-label="Ongeza lebo" autocomplete="off" enterkeyhint="done">
+                <datalist id="tag-suggest"></datalist>
+            </div>
+        </div>
 
-            <div id="editor" class="editor" hidden>
-                <button id="back-btn" class="btn ghost back-btn">← Rudi</button>
-                <input id="title" class="title-input" type="text" placeholder="Kichwa cha note" maxlength="200">
-                <textarea id="content" class="content-input" placeholder="Andika hapa..."></textarea>
+        <footer class="ed-foot">
+            <div id="ed-colors" class="colors" role="radiogroup" aria-label="Rangi ya note"></div>
+            <span id="ed-meta" class="ed-meta"></span>
+        </footer>
+    </dialog>
 
-                <div class="editor-foot">
-                    <div class="colors" id="colors" role="radiogroup" aria-label="Rangi">
-                        <button class="dot" data-color="default" title="Kawaida"></button>
-                        <button class="dot" data-color="yellow" title="Njano"></button>
-                        <button class="dot" data-color="green" title="Kijani"></button>
-                        <button class="dot" data-color="blue" title="Bluu"></button>
-                        <button class="dot" data-color="pink" title="Waridi"></button>
-                        <button class="dot" data-color="purple" title="Zambarau"></button>
-                    </div>
-                    <div class="actions">
-                        <span id="status" class="status">Imehifadhiwa</span>
-                        <button id="pin-btn" class="btn ghost">📌 Bandika</button>
-                        <button id="delete-btn" class="btn danger">🗑 Futa</button>
+    <!-- Mipangilio -->
+    <dialog id="settings" class="settings modal" aria-labelledby="settings-title">
+        <header class="set-head">
+            <h2 id="settings-title">Mipangilio</h2>
+            <button id="settings-close" class="icon-btn" type="button" aria-label="Funga" data-icon="x"></button>
+        </header>
+        <div class="set-body">
+            <section class="set-sec">
+                <h3>Mandhari</h3>
+                <div class="seg" id="seg-theme" role="group" aria-label="Mandhari">
+                    <button type="button" data-val="auto">Otomatiki</button>
+                    <button type="button" data-val="light">Mwanga</button>
+                    <button type="button" data-val="dark">Giza</button>
+                </div>
+            </section>
+
+            <section class="set-sec">
+                <h3>Panga notes kwa</h3>
+                <div class="seg" id="seg-sort" role="group" aria-label="Mpangilio wa notes">
+                    <button type="button" data-val="updated">Zilizobadilishwa</button>
+                    <button type="button" data-val="created">Mpya zaidi</button>
+                    <button type="button" data-val="title">A-Z</button>
+                </div>
+            </section>
+
+            <section class="set-sec">
+                <h3>Usalama</h3>
+                <div class="set-row">
+                    <div>
+                        <strong id="pin-state">PIN haijawekwa</strong>
+                        <p class="hint">PIN inazuia mtu kufungua app. Notes hazisimbwi (encryption).</p>
                     </div>
                 </div>
-            </div>
-        </section>
-    </main>
+                <div class="btn-row">
+                    <button id="pin-set" class="btn" type="button" data-icon="lock">Weka PIN</button>
+                    <button id="pin-remove" class="btn ghost" type="button" hidden>Ondoa PIN</button>
+                </div>
+            </section>
 
-    <div id="toast" class="toast" hidden></div>
+            <section class="set-sec">
+                <h3>Hifadhi nakala</h3>
+                <p class="hint">Notes zinakaa kwenye simu hii tu. Pakua nakala ili usizipoteze ukibadilisha simu.</p>
+                <div class="btn-row">
+                    <button id="export-btn" class="btn" type="button" data-icon="download">Pakua nakala</button>
+                    <button id="import-btn" class="btn ghost" type="button" data-icon="upload">Leta nakala</button>
+                    <input id="import-file" type="file" accept="application/json,.json" hidden>
+                </div>
+            </section>
+
+            <section class="set-sec" id="install-row" hidden>
+                <h3>App</h3>
+                <div class="btn-row">
+                    <button id="install-btn" class="btn primary" type="button" data-icon="download">Sakinisha app</button>
+                </div>
+            </section>
+
+            <section class="set-sec">
+                <h3>Hatari</h3>
+                <div class="btn-row">
+                    <button id="wipe-btn" class="btn danger" type="button" data-icon="trash">Futa data yote</button>
+                </div>
+            </section>
+
+            <p class="about">Daftari Langu 1.0 · <a href="/privacy">Sera ya faragha</a></p>
+        </div>
+    </dialog>
+
+    <!-- Uthibitisho -->
+    <dialog id="confirm" class="confirm" aria-labelledby="confirm-msg">
+        <form method="dialog">
+            <p id="confirm-msg" class="confirm-msg"></p>
+            <div class="btn-row end">
+                <button class="btn ghost" value="cancel">Ghairi</button>
+                <button class="btn danger" value="ok" id="confirm-ok">Futa</button>
+            </div>
+        </form>
+    </dialog>
+
+    <!-- Kufunga kwa PIN -->
+    <div id="lock" class="lock" hidden role="dialog" aria-modal="true" aria-labelledby="lock-title">
+        <div class="lock-card">
+            <svg class="logo big" viewBox="0 0 48 48" aria-hidden="true">
+                <rect width="48" height="48" rx="12" fill="#0a7d55"/>
+                <rect x="13" y="10" width="22" height="28" rx="3" fill="#fff"/>
+                <path d="M18 19h12M18 25h12M18 31h7" stroke="#0a7d55" stroke-width="2.6" stroke-linecap="round"/>
+            </svg>
+            <h2 id="lock-title">Weka PIN</h2>
+            <div id="lock-dots" class="dots" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+            <p id="lock-msg" class="lock-msg" aria-live="polite"></p>
+            <div id="lock-pad" class="pad"></div>
+            <button id="lock-forgot" class="link" type="button">Umesahau PIN?</button>
+            <button id="lock-cancel" class="link" type="button">Ghairi</button>
+        </div>
+    </div>
+
+    <div id="toast" class="toast" role="status" hidden>
+        <span id="toast-msg"></span>
+        <button id="toast-act" type="button" hidden></button>
+    </div>
 
     <script src="{{ url_for('static', filename='app.js') }}"></script>
 </body>
