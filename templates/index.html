@@ -39,6 +39,8 @@
             <div id="empty" class="empty" hidden></div>
         </main>
 
+        <div id="selbar" class="selbar" hidden></div>
+
         <div class="fab-wrap">
             <div id="fab-menu" class="fab-menu" hidden>
                 <button id="new-list" class="fab-opt" type="button" data-icon="check-square">Orodha</button>
@@ -59,6 +61,7 @@
             <div id="ed-menu" class="menu" role="menu" hidden>
                 <button type="button" role="menuitem" data-act="share" data-icon="share">Shiriki</button>
                 <button type="button" role="menuitem" data-act="copy" data-icon="copy">Nakili maandishi</button>
+                <button type="button" role="menuitem" data-act="txt" data-icon="download">Pakua kama faili</button>
                 <button type="button" role="menuitem" data-act="duplicate" data-icon="copy">Tengeneza nakala</button>
                 <button type="button" role="menuitem" data-act="convert" data-icon="check-square" id="ed-convert">Geuza kuwa orodha</button>
                 <button type="button" role="menuitem" data-act="delete" data-icon="trash" class="danger">Futa</button>
@@ -76,6 +79,17 @@
                 <div id="ed-taglist" class="taglist"></div>
                 <input id="ed-tag" class="tag-input" type="text" list="tag-suggest" placeholder="Ongeza lebo" maxlength="30" aria-label="Ongeza lebo" autocomplete="off" enterkeyhint="done">
                 <datalist id="tag-suggest"></datalist>
+            </div>
+            <div class="ed-due">
+                <span class="tag-ico" data-icon="calendar" aria-hidden="true"></span>
+                <span class="due-wrap">
+                    <button id="ed-due-btn" class="due-btn" type="button">Ongeza tarehe ya mwisho</button>
+                    <span id="ed-due-chip" class="tag-chip" hidden>
+                        <button id="ed-due-label" class="due-label" type="button" aria-label="Badilisha tarehe"></button>
+                        <button id="ed-due-clear" type="button" aria-label="Ondoa tarehe" data-icon="x"></button>
+                    </span>
+                    <input id="ed-due" type="date" tabindex="-1" aria-label="Tarehe ya mwisho">
+                </span>
             </div>
         </div>
 
@@ -107,6 +121,15 @@
                     <button type="button" data-val="updated">Zilizobadilishwa</button>
                     <button type="button" data-val="created">Mpya zaidi</button>
                     <button type="button" data-val="title">A-Z</button>
+                </div>
+            </section>
+
+            <section class="set-sec">
+                <h3>Ukubwa wa herufi</h3>
+                <div class="seg" id="seg-font" role="group" aria-label="Ukubwa wa herufi">
+                    <button type="button" data-val="s">Ndogo</button>
+                    <button type="button" data-val="m">Kawaida</button>
+                    <button type="button" data-val="l">Kubwa</button>
                 </div>
             </section>
 
@@ -148,7 +171,7 @@
                 </div>
             </section>
 
-            <p class="about">Daftari Langu 1.0 · <a href="/privacy">Sera ya faragha</a></p>
+            <p class="about">Daftari Langu 1.1 · <a href="/privacy">Sera ya faragha</a></p>
         </div>
     </dialog>
 
