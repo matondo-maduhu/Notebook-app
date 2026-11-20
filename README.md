@@ -14,6 +14,11 @@ Notebook app ya Kiswahili (PWA). Notes na orodha za kufanya, zinafanya kazi bila
 - Kushiriki na kunakili note, kutengeneza nakala, kugeuza maandishi <-> orodha
 - Kufanya kazi bila intaneti, na kusakinishwa kama app
 - Kutendua baada ya kufuta au kuweka kumbukumbu
+- Tarehe ya mwisho kwa kila note, na kichujio cha "Ratiba" (zilizochelewa zinaonekana nyekundu)
+- Kuchagua notes nyingi (shikilia note kwa muda mfupi, au Ctrl+bofya kwenye kompyuta) kisha kubandika, kuweka kumbukumbu au kufuta kwa pamoja
+- Ukubwa wa herufi: ndogo, kawaida, kubwa
+- Kufuta vipengee vilivyokamilika kwenye orodha kwa mara moja
+- Kupakua note moja kama faili la .txt
 
 ## Muundo wa folder
 
