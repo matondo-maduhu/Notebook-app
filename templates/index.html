@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="sw">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#4f46e5">
+    <title>Daftari Langu</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <header class="topbar">
+        <h1>📓 Daftari Langu</h1>
+        <div class="search-wrap">
+            <input id="search" type="search" placeholder="Tafuta notes..." autocomplete="off">
+        </div>
+        <button id="theme-toggle" class="icon-btn" title="Badilisha mandhari" aria-label="Badilisha mandhari">🌙</button>
+    </header>
+
+    <main class="layout">
+        <section class="list-panel" id="list-panel">
+            <div class="list-head">
+                <span id="count">0 notes</span>
+                <button id="new-btn" class="btn primary">+ Note mpya</button>
+            </div>
+            <ul id="notes-list" class="notes-list"></ul>
+            <p id="empty" class="empty" hidden>Hakuna notes bado. Bonyeza “Note mpya” kuanza.</p>
+        </section>
+
+        <section class="editor-panel" id="editor-panel">
+            <div id="editor-empty" class="editor-empty">
+                <p>Chagua note au tengeneza mpya ✍️</p>
+            </div>
+
+            <div id="editor" class="editor" hidden>
+                <button id="back-btn" class="btn ghost back-btn">← Rudi</button>
+                <input id="title" class="title-input" type="text" placeholder="Kichwa cha note" maxlength="200">
+                <textarea id="content" class="content-input" placeholder="Andika hapa..."></textarea>
+
+                <div class="editor-foot">
+                    <div class="colors" id="colors" role="radiogroup" aria-label="Rangi">
+                        <button class="dot" data-color="default" title="Kawaida"></button>
+                        <button class="dot" data-color="yellow" title="Njano"></button>
+                        <button class="dot" data-color="green" title="Kijani"></button>
+                        <button class="dot" data-color="blue" title="Bluu"></button>
+                        <button class="dot" data-color="pink" title="Waridi"></button>
+                        <button class="dot" data-color="purple" title="Zambarau"></button>
+                    </div>
+                    <div class="actions">
+                        <span id="status" class="status">Imehifadhiwa</span>
+                        <button id="pin-btn" class="btn ghost">📌 Bandika</button>
+                        <button id="delete-btn" class="btn danger">🗑 Futa</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <div id="toast" class="toast" hidden></div>
+
+    <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>
