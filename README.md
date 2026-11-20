@@ -1,45 +1,66 @@
-# 📓 Daftari Langu
+# Daftari Langu
 
-Notebook app ya Kiswahili: tengeneza, hariri, tafuta na futa notes. Inahifadhi kiotomatiki.
+Notebook app ya Kiswahili (PWA). Notes na orodha za kufanya, zinafanya kazi bila intaneti, na zinabaki kwenye simu ya mtumiaji.
+
+## Vipengele
+
+- Notes za maandishi na orodha za kufanya (checklist)
+- Lebo (#), rangi 6, kubandika juu, kumbukumbu (archive), tupio la siku 30
+- Kutafuta kwa haraka (na kuonyesha maneno yaliyopatikana)
+- Mandhari ya mwanga, giza au otomatiki
+- Gridi au orodha, kupanga kwa tarehe au A-Z
+- Kufunga app kwa PIN
+- Kupakua na kuleta nakala (backup) ya notes
+- Kushiriki na kunakili note, kutengeneza nakala, kugeuza maandishi <-> orodha
+- Kufanya kazi bila intaneti, na kusakinishwa kama app
+- Kutendua baada ya kufuta au kuweka kumbukumbu
 
 ## Muundo wa folder
 
 ```
 notebook-app/
-├── app.py              # Python (Flask) + database
+├── app.py                      # Seva ndogo ya Flask (haina database)
 ├── requirements.txt
 ├── templates/
-│   └── index.html      # HTML
+│   ├── index.html              # HTML ya app
+│   └── privacy.html            # Sera ya faragha (inahitajika Play Store)
 └── static/
-    ├── style.css       # CSS
-    └── app.js          # JavaScript
+    ├── style.css               # CSS
+    ├── app.js                  # JavaScript (mantiki yote ya app)
+    ├── sw.js                   # Service worker (offline)
+    ├── manifest.webmanifest    # Taarifa za PWA
+    ├── icon-192.png
+    ├── icon-512.png
+    └── icon-maskable-512.png
 ```
 
-## Jinsi ya kuendesha
+Notes zote zinahifadhiwa kwenye kivinjari (localStorage) cha mtumiaji. Seva inatuma faili tu, kwa hiyo inafanya kazi vizuri kwenye Vercel au Render bila kuweka database.
+
+## Kuendesha kwenye kompyuta
 
 ```bash
 pip install -r requirements.txt
 python app.py
 ```
 
-Kisha fungua http://localhost:5000
+Fungua http://localhost:5000
 
-## Vipengele
+## Kuweka mtandaoni (Vercel)
 
-- Notes mpya, hariri, futa
-- Kuhifadhi kiotomatiki (sekunde 0.5 baada ya kuacha kuandika)
-- Rangi 6 za notes
-- Kubandika (pin) notes muhimu juu
-- Kutafuta kichwa na maandishi
-- Mandhari ya giza / mwanga
-- Inafanya kazi vizuri kwenye simu
-- Ctrl+S kuhifadhi mara moja
+Pakia faili zote kwenye GitHub, kisha unganisha repo kwenye Vercel. Hakuna mipangilio ya ziada inayohitajika.
 
-## API
+## Kuipeleka Play Store
 
-| Njia | Kazi |
-|------|------|
-| GET `/api/notes?q=` | Orodha / tafuta |
-| POST `/api/notes` | Tengeneza |
-| PUT `/api/notes/<id>` | Hariri |
-| DELETE `/api/notes/<id>` | Futa |
+1. Hakikisha app iko mtandaoni kwa https (mfano `https://notebukapp.vercel.app`).
+2. Fungua **pwabuilder.com**, bandika link ya app, bonyeza **Start**.
+3. Chagua **Package for stores**, kisha **Android**, na ujaze:
+   - Package ID: mfano `com.jinalako.daftari`
+   - App name: Daftari Langu
+   - Weka kisanduku cha **Signing key** kitengenezwe kwa ajili yako, na **uhifadhi faili la key na nywila yake mahali salama**. Ukilipoteza huwezi kusasisha app.
+4. Pakua zip. Ndani yake kuna faili la `.aab` (la kupakia Play Store) na `assetlinks.json`.
+5. Weka yaliyomo ya `assetlinks.json` kwenye `static/assetlinks.json` ya repo hii. App itaifikisha kupitia `/.well-known/assetlinks.json`.
+6. Kwenye **Play Console**: tengeneza app mpya, pakia `.aab`, jaza maelezo, picha za skrini, na weka Privacy Policy URL: `https://notebukapp.vercel.app/privacy`.
+
+## Faragha
+
+Hakuna akaunti, matangazo wala ukusanyaji wa data. Tazama `/privacy`.
