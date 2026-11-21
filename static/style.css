@@ -665,3 +665,10 @@ body.selecting .card-actions { display: none !important; }
 .drag-source { opacity: .35; }
 body.is-dragging { -webkit-user-select: none; user-select: none; cursor: grabbing; }
 body.is-dragging * { cursor: grabbing !important; }
+
+/* ---- Kibodi na mapendekezo ya lebo ---- */
+.editor.kb-open .ed-foot { display: none; }
+.editor.kb-open .ed-tools { padding-bottom: 6px; }
+.tag-sug { display: flex; flex-wrap: wrap; gap: 6px; padding: 2px 0 6px 34px; }
+.tag-pick { border: 1px dashed var(--edge); background: transparent; color: var(--muted); border-radius: 999px; padding: 3px 10px; font: inherit; font-size: .85rem; cursor: pointer; }
+.tag-pick:active { background: var(--hover); color: var(--ink); }

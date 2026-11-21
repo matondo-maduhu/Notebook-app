@@ -1248,9 +1248,15 @@
         });
         const known = new Set();
         state.notes.forEach((n) => n.tags.forEach((t) => known.add(t)));
-        const dl = $("#tag-suggest");
-        dl.textContent = "";
-        [...known].filter((t) => !cur.tags.includes(t)).forEach((t) => dl.append(h("option", { value: t })));
+        const sug = $("#ed-tagsug");
+        sug.textContent = "";
+        const free = [...known].filter((t) => !cur.tags.includes(t)).slice(0, 12);
+        free.forEach((t) => sug.append(h("button", {
+            type: "button", class: "tag-pick",
+            onpointerdown: (e) => e.preventDefault(),
+            onclick: () => { if (cur.tags.length < 20) cur.tags.push(t); touch(); renderEditorTags(); },
+        }, "#" + t)));
+        sug.hidden = !free.length;
     }
 
     function addTagFromInput() {
@@ -1967,4 +1973,26 @@
     }
 
     start();
+
+    /* ---- Kibodi ya simu: weka kihariri juu ya kibodi ---- */
+    (function keyboardFit() {
+        const vv = window.visualViewport;
+        if (!vv) return;
+        const ed = $("#editor");
+        const fit = () => {
+            if (!ed.open || window.innerWidth > 700) {
+                ed.style.height = ""; ed.style.transform = ""; ed.classList.remove("kb-open");
+                return;
+            }
+            const kb = window.innerHeight - vv.height - vv.offsetTop > 120 || vv.height < window.innerHeight * 0.8;
+            ed.classList.toggle("kb-open", kb);
+            ed.style.height = vv.height + "px";
+            ed.style.transform = vv.offsetTop ? `translateY(${vv.offsetTop}px)` : "";
+        };
+        vv.addEventListener("resize", fit);
+        vv.addEventListener("scroll", fit);
+        ed.addEventListener("close", fit);
+        ed.addEventListener("focusin", () => setTimeout(fit, 120));
+    })();
 })();
+
