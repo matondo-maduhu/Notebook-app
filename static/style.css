@@ -715,3 +715,5 @@ body.is-dragging * { cursor: grabbing !important; }
 .sheet.dd .pick-search { min-width: 190px; height: 38px; padding: 0 12px; }
 .sheet.dd #tag-list { max-height: 44vh; overflow-y: auto; }
 @media (min-width: 720px) { .sheet.dd { width: max-content; } }
+.sheet.dd .pick-search { min-width: 0; width: auto; }
+.sheet.dd .pick-search input { width: 8.5em; min-width: 0; }
