@@ -57,6 +57,7 @@
             <span id="ed-status" class="ed-status" aria-live="polite"></span>
             <button id="ed-pin" class="icon-btn" type="button" aria-label="Bandika juu" aria-pressed="false" data-icon="pin"></button>
             <button id="ed-archive" class="icon-btn" type="button" aria-label="Weka kumbukumbu" data-icon="archive"></button>
+            <button id="ed-bg" class="icon-btn" type="button" aria-label="Mandharinyuma" data-icon="palette"></button>
             <button id="ed-more" class="icon-btn" type="button" aria-label="Zaidi" aria-haspopup="menu" aria-expanded="false" data-icon="more"></button>
             <div id="ed-menu" class="menu" role="menu" hidden>
                 <button type="button" role="menuitem" data-act="share" data-icon="share">Shiriki</button>
@@ -70,7 +71,8 @@
 
         <div class="ed-scroll">
             <input id="ed-title" class="ed-title" type="text" placeholder="Kichwa" maxlength="300" aria-label="Kichwa cha note" autocomplete="off">
-            <textarea id="ed-body" class="ed-body" placeholder="Andika hapa..." aria-label="Maandishi ya note" spellcheck="true"></textarea>
+            <div id="ed-images" class="ed-images" hidden></div>
+            <div id="ed-body" class="ed-body is-empty" contenteditable="true" role="textbox" aria-multiline="true" aria-label="Maandishi ya note" data-placeholder="Andika hapa..." spellcheck="true"></div>
             <div id="ed-list" class="ed-list" hidden>
                 <div id="ed-items"></div>
             </div>
@@ -91,6 +93,19 @@
                     <input id="ed-due" type="date" tabindex="-1" aria-label="Tarehe ya mwisho">
                 </span>
             </div>
+        </div>
+
+        <div id="ed-tools" class="ed-tools" role="toolbar" aria-label="Umbizo na picha">
+            <span id="ed-fmt" class="ed-fmt">
+                <button type="button" class="tool" data-cmd="bold" aria-label="Herufi nzito" aria-pressed="false" data-icon="bold"></button>
+                <button type="button" class="tool" data-cmd="italic" aria-label="Herufi za kuegemea" aria-pressed="false" data-icon="italic"></button>
+                <button type="button" class="tool" data-cmd="heading" aria-label="Kichwa" aria-pressed="false" data-icon="heading"></button>
+                <button type="button" class="tool" data-cmd="list" aria-label="Orodha ya vitone" aria-pressed="false" data-icon="list"></button>
+                <button type="button" class="tool" data-cmd="link" aria-label="Kiungo" data-icon="link"></button>
+                <span class="tool-sep" aria-hidden="true"></span>
+            </span>
+            <button type="button" class="tool" data-cmd="image" aria-label="Ongeza picha" data-icon="image"></button>
+            <input id="img-input" type="file" accept="image/*" multiple hidden>
         </div>
 
         <footer class="ed-foot">
@@ -121,6 +136,7 @@
                     <button type="button" data-val="updated">Zilizobadilishwa</button>
                     <button type="button" data-val="created">Mpya zaidi</button>
                     <button type="button" data-val="title">A-Z</button>
+                    <button type="button" data-val="manual">Mpangilio wangu</button>
                 </div>
             </section>
 
@@ -186,6 +202,38 @@
         </form>
     </dialog>
 
+    <!-- Kiungo -->
+    <dialog id="linkdlg" class="confirm" aria-labelledby="link-title">
+        <form method="dialog">
+            <p id="link-title" class="confirm-msg">Weka kiungo</p>
+            <input id="link-url" class="field" type="text" inputmode="url" placeholder="https://..." autocomplete="off" aria-label="Anwani ya kiungo">
+            <div class="btn-row end">
+                <button class="btn ghost" value="cancel" formnovalidate>Ghairi</button>
+                <button class="btn danger" value="unlink" id="link-remove" formnovalidate hidden>Ondoa</button>
+                <button class="btn primary" value="ok" id="link-ok">Weka</button>
+            </div>
+        </form>
+    </dialog>
+
+    <!-- Mandharinyuma -->
+    <dialog id="bgsheet" class="sheet" aria-labelledby="bg-title">
+        <header class="set-head">
+            <h2 id="bg-title">Mandharinyuma</h2>
+            <button id="bg-close" class="icon-btn" type="button" aria-label="Funga" data-icon="x"></button>
+        </header>
+        <div class="sheet-body">
+            <div id="bg-grid" class="bg-grid"></div>
+            <p class="hint">Gusa “Picha yako” kuweka picha kutoka kwenye simu yako kama mandharinyuma ya note hii.</p>
+            <input id="bg-input" type="file" accept="image/*" hidden>
+        </div>
+    </dialog>
+
+    <!-- Kuangalia picha -->
+    <dialog id="lightbox" class="lightbox" aria-label="Picha">
+        <img id="lb-img" alt="">
+        <button id="lb-close" class="icon-btn" type="button" aria-label="Funga" data-icon="x"></button>
+    </dialog>
+
     <!-- Kufunga kwa PIN -->
     <div id="lock" class="lock" hidden role="dialog" aria-modal="true" aria-labelledby="lock-title">
         <div class="lock-card">
@@ -208,6 +256,9 @@
         <button id="toast-act" type="button" hidden></button>
     </div>
 
+    <script src="{{ url_for('static', filename='media.js') }}"></script>
+    <script src="{{ url_for('static', filename='rich.js') }}"></script>
+    <script src="{{ url_for('static', filename='backgrounds.js') }}"></script>
     <script src="{{ url_for('static', filename='app.js') }}"></script>
 </body>
 </html>
