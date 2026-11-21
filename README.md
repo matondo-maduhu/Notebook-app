@@ -69,3 +69,11 @@ Pakia faili zote kwenye GitHub, kisha unganisha repo kwenye Vercel. Hakuna mipan
 ## Faragha
 
 Hakuna akaunti, matangazo wala ukusanyaji wa data. Tazama `/privacy`.
+
+
+## Toleo 1.2
+
+- **Umbizo la maandishi**: herufi nzito, za kuegemea, kichwa, orodha ya vitone na viungo.
+- **Picha kwenye notes**: hadi picha 12 kwa note, zinahifadhiwa kwenye simu (IndexedDB), na zinaingia kwenye nakala ya akiba (backup).
+- **Mandharinyuma**: miundo 12 ya kuchagua, au picha yako kutoka kwenye simu.
+- **Kuburuta kupanga upya**: chagua Mipangilio > "Mpangilio wangu", kisha buruta kwa alama ya vitone kwenye kila note. Vipengee vya orodha vinaburutwa pia.
