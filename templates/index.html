@@ -31,8 +31,11 @@
             <button id="settings-btn" class="icon-btn" type="button" aria-label="Mipangilio" data-icon="settings"></button>
         </header>
 
-        <nav id="chips" class="chips" aria-label="Vichujio"></nav>
-        <nav id="tagbar" class="tagbar" aria-label="Lebo" hidden></nav>
+        <div class="filterbar">
+            <button id="nav-btn" class="icon-btn fb-btn" type="button" aria-label="Orodha, ratiba na vichujio vingine" aria-haspopup="dialog" data-icon="layers"></button>
+            <button id="tag-btn" class="icon-btn fb-btn" type="button" aria-label="Lebo" aria-haspopup="dialog" data-icon="tag"></button>
+            <nav id="chips" class="chips" aria-label="Kichujio kinachotumika"></nav>
+        </div>
 
         <main id="main" class="main">
             <div id="banner" class="banner" hidden></div>
@@ -214,6 +217,28 @@
                 <button class="btn primary" value="ok" id="link-ok">Weka</button>
             </div>
         </form>
+    </dialog>
+
+    <!-- Vichujio na lebo -->
+    <dialog id="navsheet" class="sheet" aria-labelledby="nav-title">
+        <header class="set-head">
+            <h2 id="nav-title">Tazama</h2>
+            <button id="nav-close" class="icon-btn" type="button" aria-label="Funga" data-icon="x"></button>
+        </header>
+        <div id="nav-list" class="sheet-body pick-list"></div>
+    </dialog>
+    <dialog id="tagsheet" class="sheet" aria-labelledby="tag-title">
+        <header class="set-head">
+            <h2 id="tag-title">Lebo</h2>
+            <button id="tag-close" class="icon-btn" type="button" aria-label="Funga" data-icon="x"></button>
+        </header>
+        <div class="sheet-body">
+            <label class="pick-search">
+                <span data-icon="search" aria-hidden="true"></span>
+                <input id="tag-search" type="search" placeholder="Tafuta lebo" autocomplete="off" aria-label="Tafuta lebo">
+            </label>
+            <div id="tag-list" class="pick-list"></div>
+        </div>
     </dialog>
 
     <!-- Mandharinyuma -->
