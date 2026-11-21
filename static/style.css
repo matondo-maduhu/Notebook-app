@@ -704,3 +704,14 @@ body.is-dragging * { cursor: grabbing !important; }
 .sheet.dd .sheet-body { padding: 8px; }
 .sheet.dd .pick-search { margin: 0 0 6px; height: 40px; }
 @media (min-width: 720px) { .sheet.dd { width: 290px; margin: 0; border-radius: 16px; } }
+
+/* ---- Menyu nyembamba: upana unafuata maandishi ---- */
+.menu { min-width: 0; width: max-content; max-width: calc(100vw - 16px); padding: 4px; }
+.menu button { padding: 9px 12px; gap: 10px; white-space: nowrap; font-size: .95rem; }
+.sheet.dd { width: max-content; min-width: 170px; max-width: calc(100vw - 24px); }
+.sheet.dd .sheet-body { padding: 4px; }
+.sheet.dd .pick-row { min-height: 40px; padding: 0 12px; gap: 10px; font-size: .95rem; }
+.sheet.dd .pick-row .n { margin-left: 14px; }
+.sheet.dd .pick-search { min-width: 190px; height: 38px; padding: 0 12px; }
+.sheet.dd #tag-list { max-height: 44vh; overflow-y: auto; }
+@media (min-width: 720px) { .sheet.dd { width: max-content; } }
