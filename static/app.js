@@ -448,8 +448,21 @@
             chip("archive", "Kumbukumbu"),
             chip("trash", "Tupio", trashCount || null)
         );
-        [...counts.keys()].sort((a, b) => a.localeCompare(b, "sw")).forEach((t) => nav.append(chip("tag:" + t, "#" + t, counts.get(t))));
+        const bar = $("#tagbar");
+        bar.textContent = "";
+        const tags = [...counts.keys()].sort((x, y) => x.localeCompare(y, "sw"));
+        bar.hidden = !tags.length;
+        bar.classList.toggle("open", tagsOpen);
+        if (tags.length > 3) {
+            bar.append(h("button", {
+                class: "tag-toggle", type: "button", "aria-expanded": String(tagsOpen),
+                onclick: () => { tagsOpen = !tagsOpen; renderChips(); },
+            }, tagsOpen ? "Punguza ▴" : "Lebo " + tags.length + " ▾"));
+        }
+        tags.forEach((t) => bar.append(chip("tag:" + t, "#" + t, counts.get(t))));
+        nav.scrollLeft = 0;
     }
+    let tagsOpen = false;
 
     function emptyState() {
         const q = state.query.trim();
