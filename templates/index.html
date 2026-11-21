@@ -2,7 +2,7 @@
 <html lang="sw">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
     <meta name="theme-color" content="#0a7d55">
     <meta name="description" content="Daftari Langu: notes na orodha za kufanya. Bila intaneti, bila malipo, notes zako zinabaki kwenye simu yako.">
     <title>Daftari Langu</title>
@@ -79,9 +79,9 @@
             <div class="ed-tags">
                 <span class="tag-ico" data-icon="tag" aria-hidden="true"></span>
                 <div id="ed-taglist" class="taglist"></div>
-                <input id="ed-tag" class="tag-input" type="text" list="tag-suggest" placeholder="Ongeza lebo" maxlength="30" aria-label="Ongeza lebo" autocomplete="off" enterkeyhint="done">
-                <datalist id="tag-suggest"></datalist>
-            </div>
+                <input id="ed-tag" class="tag-input" type="text" placeholder="Andika lebo, kisha Enter" maxlength="30" aria-label="Ongeza lebo" autocomplete="off" enterkeyhint="done">
+                </div>
+            <div id="ed-tagsug" class="tag-sug" hidden></div>
             <div class="ed-due">
                 <span class="tag-ico" data-icon="calendar" aria-hidden="true"></span>
                 <span class="due-wrap">
