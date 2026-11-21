@@ -417,8 +417,7 @@ dialog::backdrop { background: rgba(6, 14, 10, .55); backdrop-filter: blur(2px);
 
 .ed-foot {
     flex: none; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
-    padding: 10px max(16px, env(safe-area-inset-right)) calc(10px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
-    border-top: 1px solid var(--edge);
+    padding: 6px max(16px, env(safe-area-inset-right)) calc(10px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
 }
 .colors { display: flex; gap: 8px; }
 .dot {
@@ -505,17 +504,14 @@ dialog::backdrop { background: rgba(6, 14, 10, .55); backdrop-filter: blur(2px);
     bottom: calc(92px + env(safe-area-inset-bottom));
     display: flex; align-items: center; gap: 14px;
     max-width: calc(100vw - 32px); padding: 12px 18px;
-    border-radius: 14px; background: var(--ink); color: var(--bg);
+    border-radius: 14px; background: #17201b; color: #f1f6f3; border: 1px solid rgba(255, 255, 255, .12);
     font-size: .92rem; box-shadow: var(--shadow-lg);
     animation: pop .2s ease-out;
 }
 .toast button {
     border: 0; background: none; padding: 2px 4px;
-    color: var(--accent); font-weight: 700; text-transform: uppercase; letter-spacing: .04em; font-size: .8rem;
+    color: #6ee7b7; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; font-size: .8rem;
 }
-:root:not([data-theme="dark"]) .toast button { color: #6ee7b7; }
-@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .toast button { color: var(--accent-ink); } }
-:root[data-theme="dark"] .toast button { color: var(--accent-ink); }
 
 @keyframes pop { from { opacity: 0; transform: translate(-50%, 8px); } to { opacity: 1; transform: translate(-50%, 0); } }
 
@@ -564,3 +560,108 @@ dialog::backdrop { background: rgba(6, 14, 10, .55); backdrop-filter: blur(2px);
 body.selecting .topbar { visibility: hidden; }
 body.selecting .fab-wrap { display: none; }
 body.selecting .card-actions { display: none !important; }
+
+/* ============ Umbizo, picha na mandharinyuma ============ */
+.ed-body { position: relative; white-space: normal; overflow-wrap: anywhere; outline: 0; }
+.ed-body.is-empty::before { content: attr(data-placeholder); position: absolute; left: 0; top: 4px; color: var(--muted); opacity: .8; pointer-events: none; }
+.ed-body h2 { margin: .7em 0 .25em; font-size: 1.3em; line-height: 1.3; letter-spacing: -.01em; }
+.ed-body ul, .ed-body ol { margin: .3em 0; padding-left: 1.4em; }
+.ed-body a, .card-body .lnk { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
+
+.card-body.rich { display: block; -webkit-line-clamp: unset; -webkit-box-orient: unset; white-space: normal; max-height: calc(1.5em * 9); overflow: hidden; }
+.card-body.rich > div { min-height: 1.5em; }
+.card-body.rich h2 { margin: .25em 0; font-size: 1.05em; }
+.card-body.rich ul, .card-body.rich ol { margin: .2em 0; padding-left: 1.2em; }
+.card-body.rich.fade { -webkit-mask-image: linear-gradient(#000 70%, transparent); mask-image: linear-gradient(#000 70%, transparent); }
+
+.ed-tools {
+    flex: none; display: flex; align-items: center; gap: 2px; overflow-x: auto; scrollbar-width: none;
+    padding: 4px max(10px, env(safe-area-inset-right)) 4px max(10px, env(safe-area-inset-left));
+    border-top: 1px solid var(--edge);
+}
+.ed-tools::-webkit-scrollbar { display: none; }
+.ed-fmt { display: flex; align-items: center; gap: 2px; }
+.tool {
+    flex: none; width: 40px; height: 40px; display: grid; place-items: center;
+    border: 0; border-radius: 10px; background: transparent; color: var(--ink);
+}
+.tool:hover { background: var(--hover); }
+.tool[aria-pressed="true"] { background: var(--accent-soft); color: var(--accent); }
+.tool-sep { width: 1px; height: 22px; margin: 0 6px; background: var(--edge); }
+
+.ed-images { display: grid; grid-template-columns: 1fr; gap: 8px; margin: 4px 0 12px; }
+.ed-images:not([data-count="1"]) { grid-template-columns: repeat(2, 1fr); }
+.ed-img { position: relative; margin: 0; overflow: hidden; border-radius: 12px; background: rgba(110, 125, 117, .2); }
+.ed-images:not([data-count="1"]) .ed-img { aspect-ratio: 4 / 3; }
+.ed-img img { display: block; width: 100%; height: 100%; object-fit: cover; cursor: zoom-in; }
+.ed-images[data-count="1"] .ed-img img { height: auto; max-height: 380px; }
+.ed-img-rm { position: absolute; top: 6px; right: 6px; width: 32px; height: 32px; background: rgba(0, 0, 0, .55); color: #fff; }
+.ed-img-rm:hover { background: rgba(0, 0, 0, .75); }
+
+.card-cover { position: relative; margin: -14px -14px 10px; aspect-ratio: 16 / 10; overflow: hidden; border-radius: var(--radius) var(--radius) 0 0; background: rgba(110, 125, 117, .2); }
+.card-cover img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.cover-more { position: absolute; right: 8px; bottom: 8px; padding: 2px 9px; border-radius: 999px; background: rgba(0, 0, 0, .6); color: #fff; font-size: .78rem; font-weight: 700; }
+.card.has-cover .card-pin { top: 8px; right: 8px; padding: 5px; border-radius: 50%; background: var(--surface); }
+.card.has-cover .card-title { padding-right: 0; }
+
+/* Mandharinyuma: rangi za maandishi hufuata kama mandharinyuma ni nyeusi au nyepesi */
+.has-bg { background-size: cover; background-repeat: no-repeat; }
+.card.has-bg { background-position: center; }
+.editor.has-bg, .swatch.has-bg { background-position: center bottom; }
+.card, .editor { color: var(--ink); }
+[data-tone="dark"] {
+    --ink: #f4f7f5; --bg: #0e1512; --surface: #1b2420; --muted: rgba(244, 247, 245, .78);
+    --line: rgba(255, 255, 255, .28); --edge: rgba(255, 255, 255, .18); --hover: rgba(255, 255, 255, .16);
+    --accent: #7ae0b3; --accent-ink: #052418; --accent-soft: rgba(122, 224, 179, .22);
+    color: var(--ink);
+}
+[data-tone="light"] {
+    --ink: #15211b; --bg: #f3f5f2; --surface: #ffffff; --muted: #44544c;
+    --line: rgba(0, 0, 0, .18); --edge: rgba(0, 0, 0, .1); --hover: rgba(0, 0, 0, .08);
+    --accent: #0a7d55; --accent-ink: #ffffff; --accent-soft: rgba(10, 125, 85, .16);
+    color: var(--ink);
+}
+.editor[data-tone] .ed-body { text-shadow: none; }
+
+.sheet { width: 100%; max-width: none; max-height: 64vh; margin: auto 0 0; border-radius: 20px 20px 0 0; box-shadow: var(--shadow-lg); }
+.sheet[open] { display: flex; flex-direction: column; }
+.sheet-body { overflow-y: auto; padding: 0 16px calc(18px + env(safe-area-inset-bottom)); }
+@media (min-width: 720px) { .sheet { width: min(560px, 92vw); margin: auto; border-radius: 20px; } }
+.bg-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 10px; }
+.swatch {
+    position: relative; aspect-ratio: 3 / 4; overflow: hidden; padding: 0;
+    border: 2px solid var(--line); border-radius: 14px; background-color: var(--surface); color: var(--ink);
+}
+.swatch .sw-name { position: absolute; left: 7px; right: 6px; bottom: 6px; font-size: .74rem; font-weight: 700; text-align: left; }
+.swatch[data-tone="dark"] .sw-name { color: #fff; text-shadow: 0 1px 3px rgba(0, 0, 0, .5); }
+.swatch[data-tone="light"] .sw-name { color: #15211b; }
+.swatch.mine { display: grid; place-items: center; align-content: center; gap: 4px; border-style: dashed; background: var(--bg); color: var(--accent); }
+.swatch.mine .sw-name { position: static; color: var(--accent); text-align: center; }
+.swatch.mine .i { width: 26px; height: 26px; }
+.swatch[aria-pressed="true"] { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent); }
+
+.lightbox { width: 100%; height: 100%; max-width: none; max-height: none; margin: 0; padding: 0; border: 0; background: rgba(0, 0, 0, .94); }
+.lightbox[open] { display: grid; place-items: center; }
+.lightbox img { max-width: 100%; max-height: 100%; object-fit: contain; }
+.lightbox .icon-btn { position: absolute; top: calc(10px + env(safe-area-inset-top)); right: 10px; color: #fff; background: rgba(255, 255, 255, .16); }
+
+.field {
+    width: 100%; height: 46px; margin: 8px 0 6px; padding: 0 14px; outline: 0;
+    border: 1px solid var(--line); border-radius: 12px; background: var(--bg); color: var(--ink); font-size: 1rem;
+}
+.field:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+
+/* ---- Kuburuta kupanga upya ---- */
+.grip { display: inline-grid; place-items: center; width: 28px; height: 34px; padding: 0; border: 0; background: none; color: var(--muted); cursor: grab; touch-action: none; flex: none; border-radius: 8px; -webkit-user-select: none; user-select: none; }
+.grip svg { width: 18px; height: 18px; }
+.grip:hover { color: var(--ink); }
+.item .grip { margin-left: -6px; opacity: .8; }
+.card.has-grip { position: relative; }
+.card.has-grip .grip { position: absolute; right: 6px; bottom: 6px; width: 34px; height: 34px; background: color-mix(in srgb, var(--surface) 70%, transparent); z-index: 2; }
+.card.has-grip { padding-bottom: 14px; }
+.drag-ghost { position: fixed !important; z-index: 9999; pointer-events: none; margin: 0 !important; opacity: .95; box-shadow: 0 14px 34px rgba(0,0,0,.28); transform-origin: 0 0; border-radius: 14px; }
+.drag-ghost:not(.card) { background: var(--surface); }
+.drag-ghost.card { rotate: 1.5deg; }
+.drag-source { opacity: .35; }
+body.is-dragging { -webkit-user-select: none; user-select: none; cursor: grabbing; }
+body.is-dragging * { cursor: grabbing !important; }

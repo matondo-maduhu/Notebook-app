@@ -4,6 +4,9 @@
     /* ===================== Zana ndogo ===================== */
     const $ = (sel, root = document) => root.querySelector(sel);
     const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
+    const Rich = window.DaftariRich;
+    const Media = window.DaftariMedia;
+    const Bg = window.DaftariBg;
     const now = () => Date.now();
     const DAY = 86400000;
     const uid = () =>
@@ -53,6 +56,13 @@
         "check-square": '<polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>',
         "file-text": '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>',
         chevron: '<polyline points="6 9 12 15 18 9"/>',
+        bold: '<path d="M6 4h8a4 4 0 0 1 0 8H6z"/><path d="M6 12h9a4 4 0 0 1 0 8H6z"/>',
+        italic: '<line x1="19" y1="4" x2="10" y2="4"/><line x1="14" y1="20" x2="5" y2="20"/><line x1="15" y1="4" x2="9" y2="20"/>',
+        heading: '<polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/>',
+        link: '<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>',
+        image: '<rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>',
+        palette: '<path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/>',
+        grip: '<circle cx="9" cy="6" r="1.5" fill="currentColor"/><circle cx="15" cy="6" r="1.5" fill="currentColor"/><circle cx="9" cy="12" r="1.5" fill="currentColor"/><circle cx="15" cy="12" r="1.5" fill="currentColor"/><circle cx="9" cy="18" r="1.5" fill="currentColor"/><circle cx="15" cy="18" r="1.5" fill="currentColor"/>',
         calendar: '<rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>',
     };
     const icon = (name) =>
@@ -162,7 +172,8 @@
             id: uid(), type, title: "", body: "",
             items: type === "list" ? [newItem("")] : [],
             color: "default", pinned: false, archived: false, trashedAt: null,
-            tags: [], due: null, createdAt: t, updatedAt: t,
+            tags: [], due: null, html: "", images: [], bg: "", bgTone: "", order: -t,
+            createdAt: t, updatedAt: t,
         };
     }
 
@@ -180,11 +191,25 @@
         const tags = Array.isArray(raw.tags)
             ? [...new Set(raw.tags.map(normTag).filter(Boolean))].slice(0, 20)
             : [];
+        const html = typeof raw.html === "string" && raw.html ? Rich.sanitize(raw.html) : "";
+        const images = Array.isArray(raw.images)
+            ? raw.images
+                  .slice(0, 20)
+                  .map((i) => ({ id: str(i && i.id, 64), w: num(i && i.w, 0), h: num(i && i.h, 0) }))
+                  .filter((i) => /^[\w-]{1,64}$/.test(i.id))
+            : [];
+        const bg =
+            typeof raw.bg === "string" && /^[pu]:[\w-]{1,64}$/.test(raw.bg) && (raw.bg[0] === "u" || Bg.byId(raw.bg.slice(2)))
+                ? raw.bg
+                : "";
         return {
             id: str(raw.id, 64) || uid(),
             type: raw.type === "list" ? "list" : "text",
             title: str(raw.title, 300),
-            body: str(raw.body, 100000),
+            body: str(raw.body, 100000) || (html ? Rich.toPlain(html).slice(0, 100000) : ""),
+            html, images, bg,
+            bgTone: bg && raw.bgTone === "light" ? "light" : bg ? "dark" : "",
+            order: Number.isFinite(raw.order) ? raw.order : -num(raw.createdAt, t),
             items, tags,
             color: COLOR_IDS.includes(raw.color) ? raw.color : "default",
             pinned: !!raw.pinned,
@@ -209,7 +234,7 @@
         if (savedSettings && typeof savedSettings === "object") Object.assign(state.settings, savedSettings);
         if (!["auto", "light", "dark"].includes(state.settings.theme)) state.settings.theme = "auto";
         if (!["grid", "list"].includes(state.settings.view)) state.settings.view = "grid";
-        if (!["updated", "created", "title"].includes(state.settings.sort)) state.settings.sort = "updated";
+        if (!["updated", "created", "title", "manual"].includes(state.settings.sort)) state.settings.sort = "updated";
         if (!["s", "m", "l"].includes(state.settings.fontSize)) state.settings.fontSize = "m";
 
         const saved = store.get(KEY_NOTES);
@@ -264,6 +289,7 @@
         setStatus("Inahifadhi...");
     }
     function flushSave() {
+        if (bodyDirty) syncBody();
         clearTimeout(saveTimer);
         saveTimer = null;
         const ok = store.set(KEY_NOTES, state.notes);
@@ -281,7 +307,8 @@
     }
     // Dirisha (dialog) lililo wazi huzuia kila kitu nje yake, kwa hiyo ujumbe huwekwa ndani yake.
     function placeToast(box) {
-        const host = $("dialog[open]:not(#confirm)") || document.body;
+        const open = $$("dialog[open]:not(#confirm)");
+        const host = open[open.length - 1] || document.body;
         if (box.parentNode !== host) host.append(box);
     }
     document.addEventListener("close", (e) => {
@@ -363,6 +390,7 @@
         const key = state.settings.sort;
         list.sort((a, b) => {
             if (f === "due") return a.due.localeCompare(b.due) || b.updatedAt - a.updatedAt;
+            if (key === "manual") return a.order - b.order;
             if (key === "title") return (a.title || "~").localeCompare(b.title || "~", "sw");
             if (key === "created") return b.createdAt - a.createdAt;
             return b.updatedAt - a.updatedAt;
@@ -484,12 +512,130 @@
         } else {
             host.append(grid(list));
         }
+        requestAnimationFrame(markOverflow);
     }
+
+    function markOverflow() {
+        $$(".card-body.rich").forEach((el) => el.classList.toggle("fade", el.scrollHeight > el.clientHeight + 2));
+    }
+
+    function bgInfo(n) {
+        if (!n.bg) return null;
+        if (n.bg[0] === "p") {
+            const p = Bg.byId(n.bg.slice(2));
+            return p ? { kind: "p", id: p.id, tone: p.tone } : null;
+        }
+        return { kind: "u", id: n.bg.slice(2), tone: n.bgTone === "light" ? "light" : "dark" };
+    }
+
+    // Weka mandharinyuma kwenye kadi (flavor "c") au kihariri (flavor "p")
+    function applyBg(el, n, flavor) {
+        [...el.classList].forEach((c) => { if (/^bg[pc]-/.test(c)) el.classList.remove(c); });
+        el.classList.remove("has-bg");
+        el.style.backgroundImage = "";
+        el.style.backgroundPosition = "";
+        el.removeAttribute("data-tone");
+        const info = bgInfo(n);
+        if (!info) return false;
+        el.classList.add("has-bg");
+        el.dataset.tone = info.tone;
+        if (info.kind === "p") {
+            Bg.ensure(info.id);
+            el.classList.add("bg" + flavor + "-" + info.id);
+        } else {
+            const scrim = Bg.SCRIM[info.tone];
+            const set = (u) => {
+                el.style.backgroundImage = `linear-gradient(${scrim},${scrim}),url("${u}")`;
+                el.style.backgroundPosition = "center";
+            };
+            const u = Media.urlSync(info.id);
+            if (u) set(u);
+            else Media.url(info.id).then((url) => { if (url) set(url); });
+        }
+        return true;
+    }
+
+    function setImgSrc(img, id) {
+        const u = Media.urlSync(id);
+        if (u) { img.src = u; return; }
+        Media.url(id).then((url) => { if (url) img.src = url; else img.classList.add("missing"); });
+    }
+
+    /* ---- Kuburuta kupanga upya ---- */
+    // el = kipengee kinachoburutwa, container = kisanduku chake, sel = kiteuzi cha ndugu zake.
+    function startDrag(e, el, container, sel, onDone) {
+        if (e.button != null && e.button > 0) return;
+        e.preventDefault();
+        e.stopPropagation();
+        const rect = el.getBoundingClientRect();
+        const offX = e.clientX - rect.left, offY = e.clientY - rect.top;
+        const ghost = el.cloneNode(true);
+        ghost.classList.add("drag-ghost");
+        ghost.removeAttribute("id");
+        ghost.style.width = rect.width + "px";
+        ghost.style.left = "0px";
+        ghost.style.top = "0px";
+        document.body.append(ghost);
+        el.classList.add("drag-source");
+        document.body.classList.add("is-dragging");
+        let x = e.clientX, y = e.clientY, raf = 0;
+        const place = () => { ghost.style.transform = `translate(${x - offX}px, ${y - offY}px)`; };
+        place();
+        const tick = () => {
+            const edge = 70;
+            if (y < edge) window.scrollBy(0, -Math.ceil((edge - y) / 5));
+            else if (y > window.innerHeight - edge) window.scrollBy(0, Math.ceil((y - (window.innerHeight - edge)) / 5));
+            const sc = container.closest("dialog");
+            if (sc) {
+                const r = sc.getBoundingClientRect();
+                if (y < r.top + edge) sc.scrollBy(0, -8);
+                else if (y > r.bottom - edge) sc.scrollBy(0, 8);
+            }
+            raf = requestAnimationFrame(tick);
+        };
+        raf = requestAnimationFrame(tick);
+        const move = (ev) => {
+            ev.preventDefault();
+            x = ev.clientX; y = ev.clientY;
+            place();
+            const target = document.elementsFromPoint(x, y).find((n) => n !== el && n !== ghost && n.matches && n.matches(sel) && container.contains(n));
+            if (!target) return;
+            const before = el.compareDocumentPosition(target) & Node.DOCUMENT_POSITION_FOLLOWING;
+            if (before) target.after(el); else target.before(el);
+        };
+        const end = (ev) => {
+            window.removeEventListener("pointermove", move);
+            window.removeEventListener("pointerup", end);
+            window.removeEventListener("pointercancel", end);
+            cancelAnimationFrame(raf);
+            ghost.remove();
+            el.classList.remove("drag-source");
+            document.body.classList.remove("is-dragging");
+            if (ev.type !== "pointercancel") onDone([...container.querySelectorAll(sel)]);
+        };
+        window.addEventListener("pointermove", move, { passive: false });
+        window.addEventListener("pointerup", end);
+        window.addEventListener("pointercancel", end);
+    }
+
+    function gripButton(label, onStart) {
+        const g = h("button", { class: "grip", type: "button", "aria-label": label, tabindex: "-1" });
+        g.append(svgIcon("grip"));
+        g.addEventListener("pointerdown", onStart);
+        g.addEventListener("click", (e) => e.stopPropagation());
+        g.addEventListener("contextmenu", (e) => e.preventDefault());
+        return g;
+    }
+
+    const canReorderNotes = () =>
+        state.settings.sort === "manual" && !state.query.trim() && state.filter !== "trash";
 
     function renderCard(n) {
         const q = state.query;
         const trashed = !!n.trashedAt;
-        const card = h("article", { class: "card" + (trashed ? " in-trash" : "") + (state.sel.has(n.id) ? " selected" : ""), "data-color": n.color });
+        const hasBg = !!bgInfo(n);
+        const card = h("article", { class: "card" + (trashed ? " in-trash" : "") + (state.sel.has(n.id) ? " selected" : "") + (n.images.length ? " has-cover" : ""), "data-color": hasBg ? "default" : n.color, "data-id": n.id });
+        applyBg(card, n, "c");
         attachSelect(card, n);
         if (state.sel.has(n.id)) {
             const badge = h("span", { class: "sel-badge" });
@@ -509,6 +655,28 @@
             });
         }
 
+        if (n.images.length) {
+            const cover = h("div", { class: "card-cover" });
+            const im = h("img", { alt: "", loading: "lazy", draggable: "false" });
+            setImgSrc(im, n.images[0].id);
+            cover.append(im);
+            if (n.images.length > 1) cover.append(h("span", { class: "cover-more" }, "+" + (n.images.length - 1)));
+            card.append(cover);
+        }
+        if (canReorderNotes()) {
+            card.classList.add("has-grip");
+            card.append(gripButton("Buruta kupanga upya", (e) => {
+                const box = card.parentElement;
+                startDrag(e, card, box, ".card", (els) => {
+                    const ids = els.map((c) => c.dataset.id);
+                    const notes = ids.map((id) => state.notes.find((x) => x.id === id)).filter(Boolean);
+                    const slots = notes.map((x) => x.order).sort((a, b) => a - b);
+                    for (let i = 1; i < slots.length; i++) if (slots[i] <= slots[i - 1]) slots[i] = slots[i - 1] + 0.001;
+                    notes.forEach((x, i) => { x.order = slots[i]; });
+                    flushSave();
+                });
+            }));
+        }
         if (n.pinned && !trashed) card.append(h("span", { class: "card-pin", "aria-label": "Imebandikwa" }, svgIcon("pin")));
         if (n.title) card.append(h("h3", { class: "card-title" }, highlight(n.title, q)));
 
@@ -537,10 +705,16 @@
             if (ordered.length) card.append(ul);
             if (ordered.length > 7) card.append(h("p", { class: "card-more" }, `+${ordered.length - 7} zaidi`));
         } else if (n.body.trim()) {
-            card.append(h("p", { class: "card-body" }, highlight(n.body.slice(0, 600), q)));
+            if (n.html) {
+                const rb = Rich.render(n.html, q);
+                rb.className = "card-body rich";
+                card.append(rb);
+            } else {
+                card.append(h("p", { class: "card-body" }, highlight(n.body.slice(0, 600), q)));
+            }
         }
 
-        if (!n.title && !n.body.trim() && !n.items.some((i) => i.text.trim())) {
+        if (!n.title && !n.body.trim() && !n.items.some((i) => i.text.trim()) && !n.images.length) {
             card.append(h("p", { class: "card-body" }, "Note tupu"));
         }
 
@@ -744,11 +918,15 @@
 
     /* ===================== Kihariri ===================== */
     const editor = $("#editor");
+    const edBody = $("#ed-body");
     let cur = null;
     let doneOpen = true;
+    let bodyDirty = false;
+    let bodyTimer = null;
+    const MAX_IMAGES = 12;
 
     const isEmptyNote = (n) =>
-        !n.title.trim() && !n.body.trim() && !n.items.some((i) => i.text.trim()) && n.tags.length === 0 && !n.due;
+        !n.title.trim() && !n.body.trim() && !n.items.some((i) => i.text.trim()) && n.tags.length === 0 && !n.due && !n.images.length;
 
     function touch() {
         if (!cur) return;
@@ -771,10 +949,161 @@
         $("#ed-meta").textContent = `${relTime(cur.updatedAt)} · ${info}`;
     }
 
-    function autoGrow() {
-        const ta = $("#ed-body");
-        ta.style.height = "auto";
-        ta.style.height = ta.scrollHeight + "px";
+    /* ---- Maandishi yenye umbizo ---- */
+    const escHtml = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+
+    function setBodyContent(n) {
+        edBody.innerHTML = n.html ? n.html : Rich.fromPlain(n.body);
+        Rich.linkify(edBody);
+        edBody.classList.toggle("is-empty", !n.body.trim());
+        bodyDirty = false;
+        clearTimeout(bodyTimer);
+    }
+
+    function syncBody() {
+        clearTimeout(bodyTimer);
+        bodyTimer = null;
+        if (!bodyDirty || !cur || cur.type === "list") { bodyDirty = false; return; }
+        bodyDirty = false;
+        const html = Rich.sanitize(edBody.innerHTML);
+        cur.html = html;
+        cur.body = Rich.toPlain(html).slice(0, 100000);
+        updateMeta();
+    }
+
+    function onBodyInput() {
+        bodyDirty = true;
+        edBody.classList.toggle("is-empty", !edBody.textContent.trim() && !edBody.querySelector("li"));
+        clearTimeout(bodyTimer);
+        bodyTimer = setTimeout(syncBody, 150);
+        touch();
+    }
+
+    function updateToolState() {
+        if (!cur || cur.type === "list") return;
+        const set = (cmd, on) => {
+            const b = $(`#ed-tools [data-cmd="${cmd}"]`);
+            if (b) b.setAttribute("aria-pressed", String(!!on));
+        };
+        try {
+            set("bold", document.queryCommandState("bold"));
+            set("italic", document.queryCommandState("italic"));
+            set("list", document.queryCommandState("insertUnorderedList"));
+            set("heading", (document.queryCommandValue("formatBlock") || "").toLowerCase() === "h2");
+        } catch (e) { /* hakuna */ }
+    }
+
+    /* ---- Picha za note ---- */
+    function renderEdImages() {
+        const box = $("#ed-images");
+        box.textContent = "";
+        const imgs = cur.images;
+        box.hidden = imgs.length === 0;
+        box.dataset.count = String(Math.min(imgs.length, 4));
+        imgs.forEach((im, idx) => {
+            const img = h("img", { alt: "Picha " + (idx + 1), draggable: "false" });
+            setImgSrc(img, im.id);
+            img.addEventListener("click", () => openLightbox(im.id));
+            const rm = h("button", { class: "icon-btn ed-img-rm", type: "button", "aria-label": "Ondoa picha", onclick: () => removeImage(im) });
+            rm.append(svgIcon("x"));
+            box.append(h("figure", { class: "ed-img" }, img, rm));
+        });
+    }
+
+    function removeImage(im) {
+        const note = cur;
+        const idx = note.images.indexOf(im);
+        if (idx < 0) return;
+        note.images.splice(idx, 1);
+        touch();
+        renderEdImages();
+        toast("Picha imeondolewa", "Tendua", () => {
+            note.images.splice(Math.min(idx, note.images.length), 0, im);
+            note.updatedAt = now();
+            if (cur === note) renderEdImages();
+            flushSave();
+            render();
+        });
+    }
+
+    async function addImages(fileList) {
+        const note = cur;
+        if (!note) return;
+        const files = [...fileList].filter((f) => !f.type || /^image\//.test(f.type));
+        if (!files.length) return;
+        const room = MAX_IMAGES - note.images.length;
+        if (room <= 0) return toast(`Kikomo ni picha ${MAX_IMAGES} kwa kila note`);
+        setStatus("Inapakia picha...");
+        let ok = 0;
+        let fail = 0;
+        let memOnly = false;
+        for (const f of files.slice(0, room)) {
+            try {
+                const r = await Media.processImage(f, { max: 1600, quality: 0.82 });
+                const saved = await Media.put({ id: r.id, blob: r.blob, w: r.w, h: r.h });
+                if (saved === false) memOnly = true;
+                note.images.push({ id: r.id, w: r.w, h: r.h });
+                ok++;
+            } catch (e) {
+                fail++;
+            }
+        }
+        Media.persist();
+        if (cur === note) { renderEdImages(); touch(); }
+        else { note.updatedAt = now(); flushSave(); render(); }
+        if (!ok) toast("Picha haikuweza kusomwa");
+        else if (memOnly) toast("Hifadhi ya picha haipatikani kwenye kivinjari hiki. Picha zitapotea ukifunga app.");
+        else if (fail) toast(`Picha ${ok} zimeongezwa, ${fail} hazikuweza kusomwa`);
+        else toast(ok === 1 ? "Picha imeongezwa" : `Picha ${ok} zimeongezwa`);
+        if (files.length > room) toast(`Kikomo ni picha ${MAX_IMAGES} kwa kila note`);
+    }
+
+    function openLightbox(id) {
+        const dlg = $("#lightbox");
+        const img = $("#lb-img");
+        img.removeAttribute("src");
+        Media.url(id).then((u) => { if (u) img.src = u; });
+        dlg.showModal();
+    }
+
+    /* ---- Mandharinyuma ---- */
+    function applyEditorBg() {
+        const has = applyBg(editor, cur, "p");
+        editor.dataset.color = has ? "default" : cur.color;
+    }
+
+    function buildBgGrid() {
+        const grid = $("#bg-grid");
+        if (grid.dataset.built) return;
+        grid.dataset.built = "1";
+        const label = (t) => h("span", { class: "sw-name" }, t);
+        const none = h("button", { class: "swatch none", type: "button", "data-bg": "", "aria-label": "Bila mandharinyuma", "aria-pressed": "false" }, label("Hakuna"));
+        const mine = h("button", { class: "swatch mine", type: "button", "aria-label": "Picha kutoka kwenye simu", onclick: () => $("#bg-input").click() });
+        mine.append(svgIcon("image"), label("Picha yako"));
+        grid.append(mine, none);
+        Bg.PRESETS.forEach((p) => {
+            Bg.ensure(p.id);
+            const b = h("button", { class: "swatch has-bg bgp-" + p.id, type: "button", "data-bg": "p:" + p.id, "data-tone": p.tone, "aria-label": p.name, "aria-pressed": "false" }, label(p.name));
+            grid.append(b);
+        });
+    }
+
+    function markBgSelected() {
+        $$("#bg-grid .swatch").forEach((b) => {
+            let on = false;
+            if (b.classList.contains("mine")) on = !!cur && cur.bg.startsWith("u:");
+            else if (b.dataset.bg !== undefined) on = !!cur && (cur.bg || "") === b.dataset.bg;
+            b.setAttribute("aria-pressed", String(on));
+        });
+    }
+
+    function setBg(val) {
+        if (!cur) return;
+        cur.bg = val;
+        cur.bgTone = "";
+        touch();
+        refreshEditorChrome();
+        markBgSelected();
     }
 
     function openEditor(id, opts = {}) {
@@ -782,7 +1111,7 @@
         if (!n || n.trashedAt) return;
         cur = n;
         $("#ed-title").value = n.title;
-        $("#ed-body").value = n.body;
+        setBodyContent(n);
         $("#ed-menu").hidden = true;
         $("#ed-more").setAttribute("aria-expanded", "false");
         setStatus("");
@@ -800,8 +1129,9 @@
     }
 
     function refreshEditorChrome() {
-        editor.dataset.color = cur.color;
-        $$("#ed-colors .dot").forEach((d) => d.setAttribute("aria-checked", String(d.dataset.color === cur.color)));
+        applyEditorBg();
+        $$("#ed-colors .dot").forEach((d) => d.setAttribute("aria-checked", String(!cur.bg && d.dataset.color === cur.color)));
+        renderEdImages();
         const pin = $("#ed-pin");
         pin.setAttribute("aria-pressed", String(cur.pinned));
         pin.setAttribute("aria-label", cur.pinned ? "Ondoa kubandika" : "Bandika juu");
@@ -816,8 +1146,9 @@
         const isList = cur.type === "list";
         $("#ed-body").hidden = isList;
         $("#ed-list").hidden = !isList;
+        $("#ed-fmt").hidden = isList;
         if (isList) renderListEditor();
-        else autoGrow();
+        else updateToolState();
     }
 
     /* ---- Orodha ndani ya kihariri ---- */
@@ -841,7 +1172,24 @@
 
         const del = h("button", { class: "icon-btn", type: "button", "aria-label": "Futa kipengee", onclick: () => removeItem(it, false) });
         del.append(svgIcon("x"));
-        return h("div", { class: "item" + (it.done ? " done" : ""), "data-item": it.id }, chk, input, del);
+        const row = h("div", { class: "item" + (it.done ? " done" : ""), "data-item": it.id });
+        if (!it.done) {
+            row.append(gripButton("Buruta kipengee", (e) => {
+                startDrag(e, row, row.parentElement, ".item:not(.done)", (els) => {
+                    const byId = new Map(cur.items.map((i) => [i.id, i]));
+                    const seq = els.map((r) => byId.get(r.dataset.item)).filter(Boolean);
+                    const slots = [];
+                    cur.items.forEach((i, idx) => { if (!i.done) slots.push(idx); });
+                    const next = cur.items.slice();
+                    slots.forEach((idx, k) => { if (seq[k]) next[idx] = seq[k]; });
+                    cur.items = next;
+                    touch();
+                    renderListEditor();
+                });
+            }));
+        }
+        row.append(chk, input, del);
+        return row;
     }
 
     function renderListEditor(focusId) {
@@ -917,16 +1265,19 @@
 
     /* ---- Vitendo vya kihariri ---- */
     function convertType() {
+        syncBody();
         if (cur.type === "text") {
             const lines = cur.body.split("\n").map((s) => s.trim()).filter(Boolean);
             cur.items = lines.length ? lines.map((l) => newItem(l.replace(/^[-*•]\s+/, ""))) : [newItem("")];
             cur.body = "";
+            cur.html = "";
             cur.type = "list";
         } else {
             cur.body = cur.items.filter((i) => i.text.trim()).map((i) => (i.done ? "✓ " : "") + i.text).join("\n");
             cur.items = [];
             cur.type = "text";
-            $("#ed-body").value = cur.body;
+            cur.html = "";
+            setBodyContent(cur);
         }
         touch();
         refreshEditorChrome();
@@ -1017,7 +1368,135 @@
 
     /* ---- Matukio ya kihariri ---- */
     $("#ed-title").addEventListener("input", (e) => { cur.title = e.target.value; touch(); });
-    $("#ed-body").addEventListener("input", (e) => { cur.body = e.target.value; autoGrow(); touch(); });
+    edBody.addEventListener("input", onBodyInput);
+    // Weka maandishi ya kawaida tu (hakuna umbizo la kunakili kutoka kwingine)
+    edBody.addEventListener("paste", (e) => {
+        e.preventDefault();
+        const text = (e.clipboardData || window.clipboardData).getData("text/plain");
+        if (!text) return;
+        const t = text.trim();
+        const href = /^(https?:\/\/\S+|www\.\S+)$/i.test(t) ? Rich.safeHref(t) : null;
+        if (href) document.execCommand("insertHTML", false, `<a href="${escHtml(href)}">${escHtml(t)}</a>`);
+        else document.execCommand("insertText", false, text);
+    });
+    edBody.addEventListener("drop", (e) => {
+        e.preventDefault();
+        const t = e.dataTransfer && e.dataTransfer.getData("text/plain");
+        if (t) document.execCommand("insertText", false, t);
+    });
+    edBody.addEventListener("click", (e) => {
+        const a = e.target.closest && e.target.closest("a");
+        if (!a) return;
+        e.preventDefault();
+        const href = a.getAttribute("href");
+        toast(href.replace(/^https?:\/\//, "").slice(0, 42), "Fungua", () => window.open(href, "_blank", "noopener"));
+    });
+    document.addEventListener("selectionchange", () => { if (document.activeElement === edBody) updateToolState(); });
+
+    // Toolbar: usiibe umakini wa kihariri ili uteuzi ubaki
+    const tools = $("#ed-tools");
+    ["pointerdown", "mousedown"].forEach((t) => tools.addEventListener(t, (e) => { if (e.target.closest(".tool")) e.preventDefault(); }));
+    tools.addEventListener("click", (e) => {
+        const b = e.target.closest(".tool");
+        if (!b || !cur) return;
+        const cmd = b.dataset.cmd;
+        if (cmd === "image") return $("#img-input").click();
+        if (cur.type === "list") return;
+        edBody.focus();
+        if (cmd === "link") return openLinkDialog();
+        if (cmd === "bold") document.execCommand("bold");
+        else if (cmd === "italic") document.execCommand("italic");
+        else if (cmd === "list") document.execCommand("insertUnorderedList");
+        else if (cmd === "heading") {
+            const v = (document.queryCommandValue("formatBlock") || "").toLowerCase();
+            document.execCommand("formatBlock", false, v === "h2" ? "div" : "h2");
+        }
+        onBodyInput();
+        updateToolState();
+    });
+
+    // Kiungo
+    let savedRange = null;
+    function openLinkDialog() {
+        const sel = window.getSelection();
+        savedRange = sel.rangeCount && edBody.contains(sel.anchorNode) ? sel.getRangeAt(0).cloneRange() : null;
+        const node = sel.anchorNode && (sel.anchorNode.nodeType === 1 ? sel.anchorNode : sel.anchorNode.parentElement);
+        const a = node && node.closest ? node.closest("a") : null;
+        $("#link-url").value = a ? a.getAttribute("href") : "";
+        $("#link-remove").hidden = !a;
+        const dlg = $("#linkdlg");
+        dlg.returnValue = "";
+        dlg.showModal();
+        $("#link-url").focus();
+    }
+    $("#link-url").addEventListener("keydown", (e) => {
+        if (e.key === "Enter") { e.preventDefault(); $("#linkdlg").close("ok"); }
+    });
+    $("#linkdlg").addEventListener("close", () => {
+        const rv = $("#linkdlg").returnValue;
+        if (!cur) return;
+        edBody.focus();
+        if (savedRange) {
+            const s = window.getSelection();
+            s.removeAllRanges();
+            s.addRange(savedRange);
+        }
+        if (rv === "unlink") {
+            document.execCommand("unlink");
+            onBodyInput();
+        } else if (rv === "ok") {
+            const raw = $("#link-url").value.trim();
+            if (!raw) return;
+            const href = Rich.safeHref(/^[a-z][a-z0-9+.-]*:/i.test(raw) ? raw : "https://" + raw);
+            if (!href) return toast("Kiungo si sahihi");
+            if (window.getSelection().isCollapsed) document.execCommand("insertHTML", false, `<a href="${escHtml(href)}">${escHtml(raw)}</a>`);
+            else document.execCommand("createLink", false, href);
+            onBodyInput();
+        }
+    });
+
+    // Picha
+    $("#img-input").addEventListener("change", (e) => {
+        const files = e.target.files ? [...e.target.files] : [];
+        e.target.value = "";
+        addImages(files);
+    });
+    $("#lightbox").addEventListener("click", (e) => { if (e.target.id !== "lb-close") e.currentTarget.close(); });
+    $("#lb-close").addEventListener("click", () => $("#lightbox").close());
+
+    // Mandharinyuma
+    const bgSheet = $("#bgsheet");
+    $("#ed-bg").addEventListener("click", () => {
+        if (!cur) return;
+        buildBgGrid();
+        markBgSelected();
+        bgSheet.showModal();
+    });
+    $("#bg-close").addEventListener("click", () => bgSheet.close());
+    bgSheet.addEventListener("click", (e) => { if (e.target === bgSheet) bgSheet.close(); });
+    $("#bg-grid").addEventListener("click", (e) => {
+        const b = e.target.closest(".swatch");
+        if (b && b.dataset.bg !== undefined) setBg(b.dataset.bg);
+    });
+    $("#bg-input").addEventListener("change", async (e) => {
+        const f = e.target.files && e.target.files[0];
+        e.target.value = "";
+        const note = cur;
+        if (!f || !note) return;
+        try {
+            setStatus("Inapakia picha...");
+            const r = await Media.processImage(f, { max: 1400, quality: 0.8 });
+            const saved = await Media.put({ id: r.id, blob: r.blob, w: r.w, h: r.h });
+            Media.persist();
+            note.bg = "u:" + r.id;
+            note.bgTone = r.tone;
+            if (cur === note) { touch(); refreshEditorChrome(); markBgSelected(); }
+            else { note.updatedAt = now(); flushSave(); render(); }
+            if (saved === false) toast("Hifadhi ya picha haipatikani kwenye kivinjari hiki. Picha itapotea ukifunga app.");
+        } catch (err) {
+            toast("Picha haikuweza kusomwa");
+        }
+    });
     $("#ed-back").addEventListener("click", () => closeModal(editor));
     $("#ed-pin").addEventListener("click", () => { cur.pinned = !cur.pinned; if (cur.pinned) cur.archived = false; touch(); refreshEditorChrome(); });
 
@@ -1083,12 +1562,13 @@
         $("#ed-colors").append(
             h("button", {
                 class: "dot", type: "button", role: "radio", "data-color": id, "aria-label": label, title: label, "aria-checked": "false",
-                onclick: () => { cur.color = id; touch(); refreshEditorChrome(); },
+                onclick: () => { cur.color = id; cur.bg = ""; cur.bgTone = ""; touch(); refreshEditorChrome(); },
             })
         );
     });
 
     editor.addEventListener("close", () => {
+        if (bodyDirty) syncBody();
         if (cur) {
             if (cur.type === "list") {
                 cur.items = cur.items.filter((i) => i.text.trim());
@@ -1161,17 +1641,26 @@
         saveSettings(); render();
     });
 
-    // Nakala (backup)
-    $("#export-btn").addEventListener("click", () => {
-        const data = { app: "daftari-langu", version: 1, exportedAt: new Date().toISOString(), notes: state.notes };
-        const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
-        const url = URL.createObjectURL(blob);
-        const a = h("a", { href: url, download: `daftari-langu-${new Date().toISOString().slice(0, 10)}.json` });
-        document.body.append(a);
-        a.click();
-        a.remove();
-        setTimeout(() => URL.revokeObjectURL(url), 2000);
-        toast("Nakala imepakuliwa");
+    // Nakala (backup), pamoja na picha
+    $("#export-btn").addEventListener("click", async () => {
+        try {
+            const ids = new Set();
+            state.notes.forEach((n) => {
+                n.images.forEach((i) => ids.add(i.id));
+                if (n.bg && n.bg[0] === "u") ids.add(n.bg.slice(2));
+            });
+            if (ids.size) toast("Inatayarisha nakala...");
+            const images = {};
+            for (const id of ids) {
+                const rec = await Media.get(id);
+                if (rec && rec.blob) images[id] = { w: rec.w || 0, h: rec.h || 0, data: await Media.blobToDataURL(rec.blob) };
+            }
+            const data = { app: "daftari-langu", version: 2, exportedAt: new Date().toISOString(), notes: state.notes, images };
+            downloadBlob(new Blob([JSON.stringify(data, null, ids.size ? 0 : 2)], { type: "application/json" }), `daftari-langu-${new Date().toISOString().slice(0, 10)}.json`);
+            toast("Nakala imepakuliwa");
+        } catch (err) {
+            toast("Imeshindwa kutengeneza nakala");
+        }
     });
     $("#import-btn").addEventListener("click", () => $("#import-file").click());
     $("#import-file").addEventListener("change", async (e) => {
@@ -1182,6 +1671,13 @@
             const data = JSON.parse(await file.text());
             const list = Array.isArray(data) ? data : data && Array.isArray(data.notes) ? data.notes : null;
             if (!list) throw new Error("format");
+            const imgs = data && !Array.isArray(data) && data.images && typeof data.images === "object" ? data.images : {};
+            for (const [id, rec] of Object.entries(imgs)) {
+                if (!/^[\w-]{1,64}$/.test(id) || !rec || typeof rec.data !== "string") continue;
+                if (await Media.get(id)) continue;
+                const blob = Media.dataURLToBlob(rec.data);
+                if (blob) await Media.put({ id, blob, w: num(rec.w, 0), h: num(rec.h, 0) });
+            }
             let added = 0;
             let updated = 0;
             list.map(sanitizeNote).filter(Boolean).forEach((n) => {
@@ -1210,6 +1706,7 @@
         state.query = "";
         $("#search").value = "";
         state.sel.clear();
+        Media.clear();
         saveSettings();
         flushSave();
         applyTheme();
@@ -1440,6 +1937,17 @@
         }
     }
 
+    // Futa picha ambazo hakuna note inayezitumia tena
+    function gcMedia() {
+        if (cur) return;
+        const keep = new Set();
+        state.notes.forEach((n) => {
+            n.images.forEach((i) => keep.add(i.id));
+            if (n.bg && n.bg[0] === "u") keep.add(n.bg.slice(2));
+        });
+        Media.gc(keep).catch(() => {});
+    }
+
     async function start() {
         hydrateIcons();
         buildPad();
@@ -1447,6 +1955,7 @@
         applyTheme();
         applyFont();
         render();
+        setTimeout(gcMedia, 3000);
         if (state.settings.pinHash && cryptoOk) await unlockFlow();
         handleLaunchParams();
     }

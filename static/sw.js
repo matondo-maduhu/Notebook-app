@@ -1,11 +1,14 @@
 /* Service worker ya Daftari Langu: inaiwezesha app kufanya kazi bila intaneti. */
-const VERSION = "daftari-v2";
+const VERSION = "daftari-v4";
 const SHELL = [
   "/",
   "/privacy",
   "/manifest.webmanifest",
   "/static/style.css",
   "/static/app.js",
+  "/static/media.js",
+  "/static/rich.js",
+  "/static/backgrounds.js",
   "/static/icon-192.png",
   "/static/icon-512.png",
 ];
