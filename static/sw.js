@@ -1,5 +1,5 @@
 /* Service worker ya Daftari Langu: inaiwezesha app kufanya kazi bila intaneti. */
-const VERSION = "daftari-v4";
+const VERSION = "daftari-v5";
 const SHELL = [
   "/",
   "/privacy",
@@ -45,23 +45,11 @@ self.addEventListener("fetch", (event) => {
   const url = new URL(req.url);
   if (url.origin !== self.location.origin) return;
 
-  // Kurasa: jaribu mtandao kwanza, kisha tumia nakala iliyohifadhiwa.
-  if (req.mode === "navigate") {
-    event.respondWith(
-      fetch(req)
-        .then((res) => remember(req, res))
-        .catch(() => caches.match(req).then((hit) => hit || caches.match("/")))
-    );
-    return;
-  }
-
-  // Faili nyingine: toa haraka kutoka hifadhi, na zisasishe nyuma ya pazia.
+  // Mtandao kwanza kwa kila kitu (kurasa, JS, CSS) ili toleo jipya lisichanganyike
+  // na faili za zamani; hifadhi inatumika tu ukiwa nje ya mtandao.
   event.respondWith(
-    caches.match(req).then((hit) => {
-      const network = fetch(req)
-        .then((res) => remember(req, res))
-        .catch(() => hit);
-      return hit || network;
-    })
+    fetch(req)
+      .then((res) => remember(req, res))
+      .catch(() => caches.match(req).then((hit) => hit || (req.mode === "navigate" ? caches.match("/") : undefined)))
   );
 });
