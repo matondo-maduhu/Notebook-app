@@ -1514,8 +1514,15 @@
 
     // Vichujio na lebo
     const navSheet = $("#navsheet"), tagSheet = $("#tagsheet");
-    $("#nav-btn").addEventListener("click", () => { renderNavSheet(); navSheet.showModal(); });
-    $("#tag-btn").addEventListener("click", () => { $("#tag-search").value = ""; renderTagSheet(); tagSheet.showModal(); });
+    function openDropdown(dlg, btn) {
+        dlg.showModal();
+        const r = btn.getBoundingClientRect();
+        dlg.style.top = Math.round(r.bottom + 8) + "px";
+        dlg.style.right = Math.max(12, Math.round(window.innerWidth - r.right)) + "px";
+        dlg.style.maxHeight = Math.max(200, window.innerHeight - r.bottom - 24) + "px";
+    }
+    $("#nav-btn").addEventListener("click", () => { renderNavSheet(); openDropdown(navSheet, $("#nav-btn")); });
+    $("#tag-btn").addEventListener("click", () => { $("#tag-search").value = ""; renderTagSheet(); openDropdown(tagSheet, $("#tag-btn")); });
     $("#nav-close").addEventListener("click", () => navSheet.close());
     $("#tag-close").addEventListener("click", () => tagSheet.close());
     [navSheet, tagSheet].forEach((d) => d.addEventListener("click", (e) => { if (e.target === d) d.close(); }));
