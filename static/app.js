@@ -45,6 +45,7 @@
         check: '<polyline points="20 6 9 17 4 12"/>',
         copy: '<rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>',
         settings: '<line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/>',
+        layers: '<polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/>',
         grid: '<rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>',
         list: '<line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>',
         lock: '<rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>',
@@ -423,44 +424,72 @@
         window.scrollTo({ top: 0 });
     }
 
+    const FILTERS = [
+        ["all", "Zote", "file-text"],
+        ["lists", "Orodha", "check-square"],
+        ["due", "Ratiba", "calendar"],
+        ["archive", "Kumbukumbu", "archive"],
+        ["trash", "Tupio", "trash"],
+    ];
+    let tagCounts = new Map();
+    let navCounts = {};
+
+    function filterLabel(f) {
+        if (f.startsWith("tag:")) return "#" + f.slice(4);
+        const m = FILTERS.find((x) => x[0] === f);
+        return m ? m[1] : "Zote";
+    }
+
+    function pickRow(f, label, icon, count) {
+        const b = h("button", {
+            type: "button", class: "pick-row", "aria-pressed": String(state.filter === f),
+            onclick: () => { $("#navsheet").close(); $("#tagsheet").close(); setFilter(f); },
+        });
+        if (icon) b.append(svgIcon(icon));
+        b.append(h("span", { class: "pick-label" }, label));
+        if (count) b.append(h("span", { class: "n" }, String(count)));
+        return b;
+    }
+
+    function renderNavSheet() {
+        const box = $("#nav-list");
+        box.textContent = "";
+        FILTERS.forEach(([f, label, icon]) => box.append(pickRow(f, label, icon, navCounts[f])));
+    }
+
+    function renderTagSheet() {
+        const box = $("#tag-list");
+        box.textContent = "";
+        const q = ($("#tag-search").value || "").trim().toLowerCase().replace(/^#/, "");
+        const tags = [...tagCounts.keys()].sort((x, y) => x.localeCompare(y, "sw")).filter((t) => !q || t.toLowerCase().includes(q));
+        if (!tags.length) {
+            box.append(h("p", { class: "hint" }, tagCounts.size ? "Hakuna lebo inayolingana." : "Bado hakuna lebo. Ongeza lebo ndani ya note."));
+            return;
+        }
+        tags.forEach((t) => box.append(pickRow("tag:" + t, "#" + t, null, tagCounts.get(t))));
+    }
+
     function renderChips() {
+        const live = state.notes.filter((n) => !n.trashedAt);
+        navCounts = {
+            due: live.filter((n) => n.due && !n.archived && !isFinished(n)).length,
+            trash: state.notes.length - live.length,
+        };
+        tagCounts = new Map();
+        live.forEach((n) => n.tags.forEach((t) => tagCounts.set(t, (tagCounts.get(t) || 0) + 1)));
+        if (state.filter.startsWith("tag:") && !tagCounts.has(state.filter.slice(4))) state.filter = "all";
+
+        // Kichujio kinachotumika kinaonekana kama chip yenye ✕
         const nav = $("#chips");
         nav.textContent = "";
-        const live = state.notes.filter((n) => !n.trashedAt);
-        const trashCount = state.notes.length - live.length;
-        const dueCount = live.filter((n) => n.due && !n.archived && !isFinished(n)).length;
-        const counts = new Map();
-        live.forEach((n) => n.tags.forEach((t) => counts.set(t, (counts.get(t) || 0) + 1)));
-        if (state.filter.startsWith("tag:") && !counts.has(state.filter.slice(4))) state.filter = "all";
-
-        const chip = (f, label, count) =>
-            h(
-                "button",
-                { class: "chip", type: "button", "aria-pressed": String(state.filter === f), onclick: () => setFilter(f) },
-                label,
-                count ? h("span", { class: "n" }, count) : null
-            );
-
-        nav.append(
-            chip("all", "Zote"),
-            chip("lists", "Orodha"),
-            chip("due", "Ratiba", dueCount || null),
-            chip("archive", "Kumbukumbu"),
-            chip("trash", "Tupio", trashCount || null)
-        );
-        const bar = $("#tagbar");
-        bar.textContent = "";
-        const tags = [...counts.keys()].sort((x, y) => x.localeCompare(y, "sw"));
-        bar.hidden = !tags.length;
-        bar.classList.toggle("open", tagsOpen);
-        if (tags.length > 3) {
-            bar.append(h("button", {
-                class: "tag-toggle", type: "button", "aria-expanded": String(tagsOpen),
-                onclick: () => { tagsOpen = !tagsOpen; renderChips(); },
-            }, tagsOpen ? "Punguza ▴" : "Lebo " + tags.length + " ▾"));
+        if (state.filter !== "all") {
+            const x = svgIcon("x");
+            nav.append(h("button", { class: "chip", type: "button", "aria-pressed": "true", "aria-label": "Ondoa kichujio " + filterLabel(state.filter), onclick: () => setFilter("all") }, filterLabel(state.filter), x));
         }
-        tags.forEach((t) => bar.append(chip("tag:" + t, "#" + t, counts.get(t))));
-        nav.scrollLeft = 0;
+        $("#nav-btn").classList.toggle("on", FILTERS.some((m) => m[0] === state.filter && m[0] !== "all"));
+        $("#tag-btn").classList.toggle("on", state.filter.startsWith("tag:"));
+        renderNavSheet();
+        renderTagSheet();
     }
     let tagsOpen = false;
 
@@ -1482,6 +1511,15 @@
     });
     $("#lightbox").addEventListener("click", (e) => { if (e.target.id !== "lb-close") e.currentTarget.close(); });
     $("#lb-close").addEventListener("click", () => $("#lightbox").close());
+
+    // Vichujio na lebo
+    const navSheet = $("#navsheet"), tagSheet = $("#tagsheet");
+    $("#nav-btn").addEventListener("click", () => { renderNavSheet(); navSheet.showModal(); });
+    $("#tag-btn").addEventListener("click", () => { $("#tag-search").value = ""; renderTagSheet(); tagSheet.showModal(); });
+    $("#nav-close").addEventListener("click", () => navSheet.close());
+    $("#tag-close").addEventListener("click", () => tagSheet.close());
+    [navSheet, tagSheet].forEach((d) => d.addEventListener("click", (e) => { if (e.target === d) d.close(); }));
+    $("#tag-search").addEventListener("input", renderTagSheet);
 
     // Mandharinyuma
     const bgSheet = $("#bgsheet");

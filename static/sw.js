@@ -1,5 +1,5 @@
 /* Service worker ya Daftari Langu: inaiwezesha app kufanya kazi bila intaneti. */
-const VERSION = "daftari-v7";
+const VERSION = "daftari-v8";
 const SHELL = [
   "/",
   "/privacy",
