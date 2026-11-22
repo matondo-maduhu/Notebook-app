@@ -9,6 +9,61 @@
         "SVG", "MATH", "FORM", "INPUT", "BUTTON", "TEXTAREA", "SELECT", "IMG", "VIDEO", "AUDIO",
         "CANVAS", "TITLE", "HEAD",
     ]);
+    // Rangi za maandishi. hex ni alama tu ya kuipa execCommand; rangi halisi ziko kwenye CSS ([data-c]).
+    const COLORS = [
+        { id: "red", hex: "#d93025", name: "Nyekundu" },
+        { id: "orange", hex: "#c76a00", name: "Chungwa" },
+        { id: "green", hex: "#0a7d55", name: "Kijani" },
+        { id: "blue", hex: "#1a5fd0", name: "Samawati" },
+        { id: "purple", hex: "#7a3fc4", name: "Zambarau" },
+        { id: "pink", hex: "#c2185b", name: "Waridi" },
+        { id: "gray", hex: "#6b7a72", name: "Kijivu" },
+    ];
+    const COLOR_IDS = new Set(COLORS.map((c) => c.id));
+    const SENTINEL_NONE = "#010101";
+    function parseRgb(v) {
+        const s = String(v || "").trim().toLowerCase();
+        let m = /^#([0-9a-f]{6})$/.exec(s);
+        if (m) return [parseInt(m[1].slice(0, 2), 16), parseInt(m[1].slice(2, 4), 16), parseInt(m[1].slice(4), 16)];
+        m = /^#([0-9a-f]{3})$/.exec(s);
+        if (m) return m[1].split("").map((c) => parseInt(c + c, 16));
+        m = /^rgba?\(\s*(\d+)[,\s]+(\d+)[,\s]+(\d+)/.exec(s);
+        return m ? [+m[1], +m[2], +m[3]] : null;
+    }
+    // Rangi yoyote -> kitambulisho cha rangi iliyo karibu zaidi ("none" = rangi ya kawaida)
+    function colorKey(v) {
+        const rgb = parseRgb(v);
+        if (!rgb) return null;
+        if (rgb[0] === 1 && rgb[1] === 1 && rgb[2] === 1) return "none";
+        let best = null, bd = Infinity;
+        COLORS.forEach((c) => {
+            const t = parseRgb(c.hex);
+            const d = (t[0] - rgb[0]) ** 2 + (t[1] - rgb[1]) ** 2 + (t[2] - rgb[2]) ** 2;
+            if (d < bd) { bd = d; best = c.id; }
+        });
+        return best;
+    }
+    function keyOfNode(n) {
+        const dc = n.getAttribute("data-c");
+        if (dc && (COLOR_IDS.has(dc) || dc === "none")) return dc;
+        const attr = n.getAttribute("color");
+        if (attr) return colorKey(attr);
+        const m = /(?:^|;)\s*color:\s*([^;]+)/i.exec(n.getAttribute("style") || "");
+        return m ? colorKey(m[1]) : null;
+    }
+    // Ndani ya kihariri: geuza <font color> / style ya rangi kuwa data-c bila kuhamisha nodi (uteuzi unabaki)
+    function normalizeColors(root) {
+        root.querySelectorAll("font, span[style]").forEach((n) => {
+            const k = keyOfNode(n);
+            if (!k) return;
+            n.removeAttribute("color");
+            n.removeAttribute("face");
+            n.removeAttribute("size");
+            if (n.tagName === "SPAN") n.style.removeProperty("color");
+            n.setAttribute("data-c", k);
+        });
+    }
+
     const MAX_HTML = 200000;
     const MAX_DEPTH = 30;
 
@@ -55,7 +110,7 @@
                     }
                     break;
                 }
-                case "SPAN": {
+                case "FONT": case "SPAN": {
                     // Baadhi ya vivinjari huweka umbizo kwa style badala ya b/i/u.
                     const st = (n.getAttribute("style") || "").toLowerCase();
                     const bold = /font-weight:\s*(bold|[6-9]00)/.test(st);
@@ -63,6 +118,8 @@
                     const under = /text-decoration[^;]*underline/.test(st);
                     let cur = out;
                     const wrap = (t) => { const w = document.createElement(t); cur.append(w); cur = w; };
+                    const ck = keyOfNode(n);
+                    if (ck) { const w = document.createElement("span"); w.setAttribute("data-c", ck); cur.append(w); cur = w; }
                     if (bold) wrap("b");
                     if (ital) wrap("i");
                     if (under) wrap("u");
@@ -207,5 +264,5 @@
 
     const isEmpty = (html) => !String(html || "").replace(/<[^>]*>/g, "").trim();
 
-    window.DaftariRich = { sanitize, fromPlain, toPlain, linkify, markText, render, safeHref, isEmpty };
+    window.DaftariRich = { COLORS, SENTINEL_NONE, normalizeColors, sanitize, fromPlain, toPlain, linkify, markText, render, safeHref, isEmpty };
 })();

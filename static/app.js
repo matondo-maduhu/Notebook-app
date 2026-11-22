@@ -46,6 +46,7 @@
         copy: '<rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>',
         settings: '<line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/>',
         layers: '<polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/>',
+        textcolor: '<path d="M5 17L12 3l7 14"/><path d="M8 12h8"/><line x1="4" y1="21" x2="20" y2="21" stroke-width="3"/>',
         grid: '<rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>',
         list: '<line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>',
         lock: '<rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>',
@@ -1014,6 +1015,7 @@
     }
 
     function onBodyInput() {
+        Rich.normalizeColors(edBody);
         bodyDirty = true;
         edBody.classList.toggle("is-empty", !edBody.textContent.trim() && !edBody.querySelector("li"));
         clearTimeout(bodyTimer);
@@ -1452,6 +1454,7 @@
         if (cur.type === "list") return;
         edBody.focus();
         if (cmd === "link") return openLinkDialog();
+        if (cmd === "color") return toggleColorPop(b);
         if (cmd === "bold") document.execCommand("bold");
         else if (cmd === "italic") document.execCommand("italic");
         else if (cmd === "list") document.execCommand("insertUnorderedList");
@@ -1462,6 +1465,41 @@
         onBodyInput();
         updateToolState();
     });
+
+    // Rangi ya maandishi: chagua rangi kisha andika, au teua maneno kisha chagua rangi
+    const colorPop = $("#colorpop");
+    function buildColorPop() {
+        if (colorPop.childElementCount) return;
+        Rich.COLORS.forEach((c) => {
+            const b = h("button", { type: "button", class: "cdot", "data-c": c.id, "aria-label": c.name, title: c.name });
+            colorPop.append(b);
+        });
+        const none = h("button", { type: "button", class: "cdot none", "data-c": "none", "aria-label": "Rangi ya kawaida", title: "Rangi ya kawaida" });
+        none.append(svgIcon("x"));
+        colorPop.append(none);
+    }
+    function toggleColorPop(btn) {
+        buildColorPop();
+        if (!colorPop.hidden) { colorPop.hidden = true; return; }
+        colorPop.hidden = false;
+        const er = editor.getBoundingClientRect();
+        const br = btn.getBoundingClientRect();
+        colorPop.style.bottom = Math.round(er.bottom - br.top + 8) + "px";
+        colorPop.style.left = Math.max(8, Math.min(Math.round(br.left - er.left - 8), er.width - colorPop.offsetWidth - 8)) + "px";
+    }
+    ["pointerdown", "mousedown"].forEach((t) => colorPop.addEventListener(t, (e) => e.preventDefault()));
+    colorPop.addEventListener("click", (e) => {
+        const b = e.target.closest(".cdot");
+        if (!b || !cur) return;
+        edBody.focus();
+        const c = Rich.COLORS.find((x) => x.id === b.dataset.c);
+        try { document.execCommand("styleWithCSS", false, false); } catch (err) { /* hakuna */ }
+        document.execCommand("foreColor", false, c ? c.hex : Rich.SENTINEL_NONE);
+        onBodyInput();
+        colorPop.hidden = true;
+    });
+    editor.addEventListener("close", () => { colorPop.hidden = true; });
+    edBody.addEventListener("input", () => { colorPop.hidden = true; });
 
     // Kiungo
     let savedRange = null;
