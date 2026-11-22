@@ -210,6 +210,7 @@
             title: str(raw.title, 300),
             body: str(raw.body, 100000) || (html ? Rich.toPlain(html).slice(0, 100000) : ""),
             html, images, bg,
+            titleColor: Rich.COLORS.some((c) => c.id === raw.titleColor) ? raw.titleColor : "",
             bgTone: bg && raw.bgTone === "light" ? "light" : bg ? "dark" : "",
             order: Number.isFinite(raw.order) ? raw.order : -num(raw.createdAt, t),
             items, tags,
@@ -721,7 +722,11 @@
             }));
         }
         if (n.pinned && !trashed) card.append(h("span", { class: "card-pin", "aria-label": "Imebandikwa" }, svgIcon("pin")));
-        if (n.title) card.append(h("h3", { class: "card-title" }, highlight(n.title, q)));
+        if (n.title) {
+            const t = h("h3", { class: "card-title" }, highlight(n.title, q));
+            if (n.titleColor) t.setAttribute("data-c", n.titleColor);
+            card.append(t);
+        }
 
         if (n.type === "list") {
             const shown = n.items.filter((i) => i.text.trim());
@@ -1155,6 +1160,7 @@
         if (!n || n.trashedAt) return;
         cur = n;
         $("#ed-title").value = n.title;
+        applyTitleColor();
         setBodyContent(n);
         $("#ed-menu").hidden = true;
         $("#ed-more").setAttribute("aria-expanded", "false");
@@ -1190,7 +1196,7 @@
         const isList = cur.type === "list";
         $("#ed-body").hidden = isList;
         $("#ed-list").hidden = !isList;
-        $("#ed-fmt").hidden = isList;
+        $("#ed-fmt").classList.toggle("list-mode", isList);
         if (isList) renderListEditor();
         else updateToolState();
     }
@@ -1445,16 +1451,18 @@
 
     // Toolbar: usiibe umakini wa kihariri ili uteuzi ubaki
     const tools = $("#ed-tools");
-    ["pointerdown", "mousedown"].forEach((t) => tools.addEventListener(t, (e) => { if (e.target.closest(".tool")) e.preventDefault(); }));
+    ["pointerdown", "mousedown"].forEach((t) => tools.addEventListener(t, (e) => {
+        if (e.target.closest(".tool")) { titleWasFocused = document.activeElement === $("#ed-title"); e.preventDefault(); }
+    }));
     tools.addEventListener("click", (e) => {
         const b = e.target.closest(".tool");
         if (!b || !cur) return;
         const cmd = b.dataset.cmd;
         if (cmd === "image") return $("#img-input").click();
+        if (cmd === "color") return toggleColorPop(b);
         if (cur.type === "list") return;
         edBody.focus();
         if (cmd === "link") return openLinkDialog();
-        if (cmd === "color") return toggleColorPop(b);
         if (cmd === "bold") document.execCommand("bold");
         else if (cmd === "italic") document.execCommand("italic");
         else if (cmd === "list") document.execCommand("insertUnorderedList");
@@ -1468,19 +1476,33 @@
 
     // Rangi ya maandishi: chagua rangi kisha andika, au teua maneno kisha chagua rangi
     const colorPop = $("#colorpop");
+    let colorTarget = "body";
+    let titleWasFocused = false;
+    function applyTitleColor() {
+        const t = $("#ed-title");
+        if (cur && cur.titleColor) t.setAttribute("data-c", cur.titleColor); else t.removeAttribute("data-c");
+    }
+    function setColorTarget(t) {
+        colorTarget = t;
+        colorPop.querySelectorAll(".ctab").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.t === t)));
+    }
     function buildColorPop() {
         if (colorPop.childElementCount) return;
-        Rich.COLORS.forEach((c) => {
-            const b = h("button", { type: "button", class: "cdot", "data-c": c.id, "aria-label": c.name, title: c.name });
-            colorPop.append(b);
-        });
+        const tabs = h("div", { class: "ctabs" });
+        [["body", "Maandishi"], ["title", "Kichwa"]].forEach(([t, label]) => tabs.append(h("button", { type: "button", class: "ctab", "data-t": t, "aria-pressed": "false" }, label)));
+        const row = h("div", { class: "crow" });
+        Rich.COLORS.forEach((c) => row.append(h("button", { type: "button", class: "cdot", "data-c": c.id, "aria-label": c.name, title: c.name })));
         const none = h("button", { type: "button", class: "cdot none", "data-c": "none", "aria-label": "Rangi ya kawaida", title: "Rangi ya kawaida" });
         none.append(svgIcon("x"));
-        colorPop.append(none);
+        row.append(none);
+        colorPop.append(tabs, row);
     }
     function toggleColorPop(btn) {
         buildColorPop();
         if (!colorPop.hidden) { colorPop.hidden = true; return; }
+        const isList = cur.type === "list";
+        colorPop.classList.toggle("only-title", isList);
+        setColorTarget(isList || titleWasFocused ? "title" : "body");
         colorPop.hidden = false;
         const er = editor.getBoundingClientRect();
         const br = btn.getBoundingClientRect();
@@ -1489,13 +1511,21 @@
     }
     ["pointerdown", "mousedown"].forEach((t) => colorPop.addEventListener(t, (e) => e.preventDefault()));
     colorPop.addEventListener("click", (e) => {
+        const tab = e.target.closest(".ctab");
+        if (tab) return setColorTarget(tab.dataset.t);
         const b = e.target.closest(".cdot");
         if (!b || !cur) return;
-        edBody.focus();
         const c = Rich.COLORS.find((x) => x.id === b.dataset.c);
-        try { document.execCommand("styleWithCSS", false, false); } catch (err) { /* hakuna */ }
-        document.execCommand("foreColor", false, c ? c.hex : Rich.SENTINEL_NONE);
-        onBodyInput();
+        if (colorTarget === "title") {
+            cur.titleColor = c ? c.id : "";
+            applyTitleColor();
+            touch();
+        } else {
+            edBody.focus();
+            try { document.execCommand("styleWithCSS", false, false); } catch (err) { /* hakuna */ }
+            document.execCommand("foreColor", false, c ? c.hex : Rich.SENTINEL_NONE);
+            onBodyInput();
+        }
         colorPop.hidden = true;
     });
     editor.addEventListener("close", () => { colorPop.hidden = true; });
